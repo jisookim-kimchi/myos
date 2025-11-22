@@ -1,0 +1,20 @@
+#ifndef STREAMER_H
+#define STREAMER_H
+
+#include "disk.h"
+#include <stdint.h>
+#include "memory/heap/kernel_heap.h"
+#include "status.h"
+#include "../config.h"
+
+typedef struct disk_streamer
+{
+    disk_t *disk;         // 대상 디스크
+    uint32_t pos;         // 현재 스트림 위치 (바이트 단위)
+} disk_streamer_t;
+
+struct disk_streamer* create_disk_streamer(int disk_id);
+int     disk_stream_seek(struct disk_streamer* streamer, uint32_t position);
+int     disk_stream_read(struct disk_streamer* streamer,void*out, int total);
+void    disk_streamer_close(struct  disk_streamer* streamer);
+#endif
