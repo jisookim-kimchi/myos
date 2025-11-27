@@ -11,7 +11,7 @@ int ft_atoi(const char *str);
 int ft_strcmp(const char *s1, const char *s2);
 char *ft_strcpy(char *dest, const char *src);
 int strnlen_terminator(const char* str, int max, char terminator);
-int istrncmp(const char* s1, const char* s2, int n);
+int ft_istrncmp(const char* s1, const char* s2, int n);
 char ft_tolower(char s1);
 
 #endif

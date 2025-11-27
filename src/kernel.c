@@ -125,9 +125,20 @@ void kernel_main()
     // {
     //     print("Path parsing failed!\n");
     // }
+    int fd = fopen("0:/test.txt", "r");
+    if (fd)
+    {
+        print("File open!\n");
+        char buffer[20] = {0};
+        fread(fd, buffer, 1, 20);
+        print(buffer);
+    }
+    if (fd <= 0)
+    {
+        print("File open failed!\n");
+    }
+    while (1)
+    {
 
-    disk_streamer_t *streamer = create_disk_streamer(0);
-    disk_stream_seek(streamer, 0x201);
-    unsigned char c = 0;
-    disk_stream_read(streamer, &c, 1);
+    }
 }

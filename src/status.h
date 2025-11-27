@@ -8,6 +8,6 @@
 #define MYOS_BAD_PATH        4    
 #define MYOS_NO_FREE_FILE_DESCRIPTOR 5
 #define MYOS_ERROR_FILESYSTEM_NOT_SUPPORTED 6
-
-
+#define MYOS_FILE_NOT_FOUND  7
+#define MYOS_EOF             8
 #endif

@@ -51,17 +51,23 @@ int disk_stream_read(struct disk_streamer* streamer,void*out, int total)
         goto out;
     }
 
-    int to_read = total > MYOS_SECTOR_SIZE ? MYOS_SECTOR_SIZE : total;
+    int sector_size = streamer->disk->sector_size;
+    int to_read = total > sector_size ? sector_size : total;
     for (int i = 0; i < to_read; i++)
     {
         ((unsigned char*)out)[i] = buffer[offset + i];
     }
 
-    //update stremaer status
+    // update streamer status
     streamer->pos += to_read;
-    if (total > MYOS_SECTOR_SIZE)
+    if (total > sector_size)
     {
-        res = disk_stream_read(streamer, (unsigned char*)out, total - MYOS_SECTOR_SIZE);
+        // write the next chunk after the data we've already written
+        res = disk_stream_read(streamer, (unsigned char*)out + to_read, total - to_read);
+        if (res >= 0)
+        {
+            res += to_read; // accumulate bytes read
+        }
     }
     else
     {
@@ -70,11 +76,6 @@ int disk_stream_read(struct disk_streamer* streamer,void*out, int total)
 
 out:
     return res;
-}
-
-void disk_streamer_close(struct disk_streamer *streamer)
-{
-    return ;
 }
 
 void destroy_disk_streamer(struct disk_streamer* streamer)

@@ -95,10 +95,14 @@ int ft_istrncmp(const char* s1, const char* s2, int n)
     unsigned char u1, u2;
     while(n-- > 0)
     {
-        u1 = (unsigned char)*s1++;
-        u2 = (unsigned char)*s2++;
-        if (u1 != u2 && ft_tolower(u1) != ft_tolower(u2))
-            return u1 - u2;
+        u1 = ft_tolower((unsigned char)*s1++);
+        u2 = ft_tolower((unsigned char)*s2++);
+
+        // 2. 소문자화된 두 문자가 다르면, 그 차이값을 반환합니다
+        if (u1 != u2)
+        {
+            return u1 - u2; 
+        }
         if (u1 == '\0')
             return 0;
     }

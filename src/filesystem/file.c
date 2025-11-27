@@ -71,7 +71,7 @@ static int make_new_fd(struct file_descriptor** out_fd)
     return res;
 }
 
-static struct file_descriptor* get_free_file_descriptor(int fd)
+static struct file_descriptor* get_file_descriptor(int fd)
 {
     if (fd <= 0 || fd > MYOS_MAX_FILE_DESCRIPTORS)
     {
@@ -127,32 +127,36 @@ int fopen(const char* filename, const char* mode)
     struct path_root* root_path = parse_path(filename, NULL);
     if (!root_path)
     {
-        res = MYOS_INVALID_ARG;
+        res = -MYOS_INVALID_ARG;
+        print("0\n");
         goto out;
     }
 
     // 0:/test.txt
     if (!root_path->first)
     {
-        res = MYOS_INVALID_ARG;
+        res = -MYOS_INVALID_ARG;
+        print("1\n");
         goto out;
     }
     struct disk *d = get_disk(root_path->drive_number);
     if (!d)
     {
-        res = MYOS_IO_ERROR;
+        res = -MYOS_IO_ERROR;
+        print("2\n");
         goto out;
     }
     if (!d->filesystem)
     {
-        res = MYOS_IO_ERROR;
+        res = -MYOS_IO_ERROR;
         goto out;
     }
 
     FILE_MODE filemode = get_filemode(mode);
     if (filemode == FILE_MODE_INVALID)
     {
-        res = MYOS_IO_ERROR;
+        res = -MYOS_IO_ERROR;
+        print("3\n");
         goto out;
     }
     
@@ -160,6 +164,7 @@ int fopen(const char* filename, const char* mode)
     if (ISERR(fd_private_data))
     {
         res = ERROR_I(fd_private_data);
+        print("4\n");
         goto out;
     }
     struct file_descriptor* desc = 0;
@@ -167,18 +172,43 @@ int fopen(const char* filename, const char* mode)
     res = make_new_fd(&desc);
     if (res < 0)
     {
+        print("5\n");
         goto out;
+
     }
     desc->filesystem = d->filesystem;
     desc->private = fd_private_data;
     desc->disk = d;
+    desc->pos = 0;
     res = desc->index;
 
 out:
     // fopen shouldnt return negative values
     if (res < 0)
+    {
         res = 0;
+    }
 
     return res;
 }
 
+int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb)
+{
+    int res = 0;
+    if (size == 0 || nmemb == 0 || fd < 1)
+    {
+        res = MYOS_INVALID_ARG;
+        goto out;
+    }
+    struct file_descriptor* desc = get_file_descriptor(fd);
+    if (!desc)
+    {
+        res = -MYOS_INVALID_ARG;
+        goto out;
+    }
+
+    res = desc->filesystem->read(desc->disk, desc->pos, desc->private, size, nmemb, buffer);
+
+out:
+    return res;
+}

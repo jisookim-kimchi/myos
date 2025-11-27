@@ -7,6 +7,7 @@
 #define FAT16_FAT_ENTRY_SIZE 0x02
 #define FAT16_BAD_SECTOR 0xFF7
 #define FAT16_UNUSED 0x00
+#define FAT_EOF_MARKER 0xFFF8
 
 typedef unsigned int FAT_ITEM_TYPE;
 #define FAT_ITEM_TYPE_DIRECTORY 0
@@ -113,7 +114,7 @@ struct fat_private
 
     // Used to stream data clusters
     struct disk_streamer* cluster_read_stream;
-    
+
     // Used to stream the file allocation table
     struct disk_streamer* fat_read_stream;
 
@@ -124,6 +125,11 @@ struct fat_private
 filesystem_t* fat16_init();
 void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode);
 int fat16_resolve(struct disk* disk);
-struct fat_item* get_fat16_dir_entry(struct disk* disk, struct path_part* path);
+struct fat_item* fat16_get_dir_entry(struct disk* disk, struct path_part* path);
 struct fat_item* fat16_find_item_in_dir(struct disk* disk, struct fat_directory* directory, const char* name);
+void format_83_to_string(struct fat_directory_item* item, char *out, int max);
+struct fat_directory_item *fat16_clone_dir_item(struct fat_directory_item *src, size_t size);
+
+void fat16_free_dir(struct fat_directory* directory);
+void fat16_item_free(struct fat_item* item);
 #endif
