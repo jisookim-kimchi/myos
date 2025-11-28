@@ -6,11 +6,19 @@
 #include "status.h"
 #include "kernel.h"
 
-
 static int fat16_get_cluster_size(struct disk* disk,struct fat_private* private);
 static struct fat_directory* fat16_load_for_sub_directory(struct disk* disk, struct fat_directory_item* item);
 static struct fat_item *fat16_new_item_from_directory_item(struct disk *disk, struct fat_directory_item *directory_item);
 static int fat16_get_next_cluster(struct disk* disk, int cur_cluster);
+
+//gloabl struct resolve, open, name
+filesystem_t fat16_filesystem = 
+{
+    .resolve = fat16_resolve,
+    .open = fat16_open,
+    .read = fat16_read,
+    .unresolve = fat16_unresolve,
+};
 
 // small debug helper: print a single byte as two hex chars
 static void fat16_print_hex_byte(unsigned char b)
@@ -21,16 +29,6 @@ static void fat16_print_hex_byte(unsigned char b)
     h[1] = hex[b & 0xF];
     print(h);
 }
-
-
-
-//gloabl struct resolve, open, name
-filesystem_t fat16_filesystem = 
-{
-    .resolve = fat16_resolve,
-    .open = fat16_open,
-    //.read = fat16_read
-};
 
 filesystem_t *fat16_init()
 {
@@ -68,6 +66,9 @@ int fat16_get_total_items_for_dir(struct disk* disk, int root_dir_sector_pos)
         res = -MYOS_IO_ERROR;
         goto out;
     }
+    
+    print("Counting directory items...\n");
+    
     while (1)
     {
         if (disk_stream_read(stream, &item, sizeof(struct fat_directory_item)) < 0)
@@ -77,15 +78,21 @@ int fat16_get_total_items_for_dir(struct disk* disk, int root_dir_sector_pos)
         }
         if (item.filename[0] == 0x00)
         {
+            // We are done
             break;
         }
-        if (item.filename[0] != 0xE5)
-        {
-            i++;
-        }
-    }
-    res = i;
 
+        // Is the item unused
+        if (item.filename[0] == 0xE5)
+        {
+            continue;
+        }
+
+        i++;
+    }
+
+    res = i;
+    
 out:
     return res;
 }
@@ -125,6 +132,7 @@ int fat16_get_root_directory(struct disk* disk, struct fat_private* fat_private,
         res = -MYOS_IO_ERROR;
         goto out;
     }
+    
     out_directory->item = dir;
     out_directory->total = total_items;
     out_directory->sector_pos = root_dir_sector_pos;
@@ -166,15 +174,9 @@ int fat16_resolve(struct disk* disk)
     disk->filesystem = &fat16_filesystem;
 
 out:
-    if (stream)
-    {
-        destroy_disk_streamer(stream);
-    }
-
     if (res < 0)
     {
-        kernel_free(fat_private);
-        disk->fs_private_data = NULL;
+        fat16_unresolve(disk);
     }
     return res;
 }
@@ -250,15 +252,39 @@ struct fat_item *fat16_find_item_in_dir(struct disk *disk, struct fat_directory 
     int i = 0;
     struct fat_item *item = NULL;
     char tempfile[MYOS_MAX_PATH_LENGTH] = {0};
-    while (i < directory->total)
-    {
+    
+    struct fat_private* fat_private = disk->fs_private_data;
+    int max_entries = fat_private->header.primary_header.root_dir_entries;
+    
+    // Iterate until we hit the end marker (0x00) or max entries
+    while (i < max_entries)
+    {   
+        if (directory->item[i].filename[0] == 0x00)
+        {
+            // End of directory
+            break;
+        }
+        
+        // Skip LFN entries (0x0F)
+        if (directory->item[i].attribute == 0x0F)
+        {
+            i++;
+            continue;
+        }
+        
+        // Skip deleted entries (0xE5)
+        if (directory->item[i].filename[0] == 0xE5)
+        {
+            i++;
+            continue;
+        }
+        
         // Convert 8.3 entry to string
         format_83_to_string(&directory->item[i], tempfile, sizeof(tempfile));
 
-
         if (ft_istrncmp(tempfile, name, ft_strlen(name)) == 0)
         {
-            print("Found matching item: ");
+            // Found it!
             item = fat16_new_item_from_directory_item(disk, &directory->item[i]);
             break;
         }
@@ -283,7 +309,7 @@ static struct fat_item *fat16_new_item_from_directory_item(struct disk *disk, st
     else
     {
         f_item->type = FAT_ITEM_TYPE_FILE;
-        f_item->item = fat16_clone_dir_item(directory_item, sizeof(struct fat_directory_item));
+        f_item->dir_item = fat16_clone_dir_item(directory_item, sizeof(struct fat_directory_item));
     }
     return f_item; 
 }
@@ -574,8 +600,48 @@ void fat16_item_free(struct fat_item* item)
     }
     else if(item->type == FAT_ITEM_TYPE_FILE)
     {
-        kernel_free(item->item);
+        kernel_free(item->dir_item);
     }
 
     kernel_free(item);
 }
+
+int fat16_unresolve(struct disk *disk)
+{
+    if (!disk || !disk->fs_private_data)
+        return -MYOS_INVALID_ARG;
+    struct fat_private *priv = disk->fs_private_data;
+    /* ① 스트리머 해제 */
+    if (priv->cluster_read_stream)
+        destroy_disk_streamer(priv->cluster_read_stream);
+    if (priv->fat_read_stream)
+        destroy_disk_streamer(priv->fat_read_stream);
+    if (priv->directory_stream)
+        destroy_disk_streamer(priv->directory_stream);
+    /* ② 루트 디렉터리 버퍼 해제 */
+    if (priv->root_directory.item)
+        kernel_free(priv->root_directory.item);
+    /* ③ 구조체 자체 해제 */
+    kernel_free(priv);
+    disk->fs_private_data = NULL;
+    return 0;   // 성공
+}
+
+int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out)
+{
+    struct fat_file_descriptor *ffd = private_data;
+    
+    if (!ffd || !ffd->item)
+        return -MYOS_INVALID_ARG;
+
+    uint32_t total_bytes = read_size * nmemb;
+
+    uint32_t first_cluster = fat16_get_first_cluster(ffd->item->dir_item);
+
+    return fat16_read_internal(disk,
+                               first_cluster,
+                               offset,
+                               total_bytes,
+                               out);
+}
+

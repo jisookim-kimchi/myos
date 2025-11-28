@@ -94,7 +94,7 @@ struct fat_item
 {
     union 
     {
-        struct fat_directory_item* item;
+        struct fat_directory_item* dir_item;
         struct fat_directory* directory;
     };
     
@@ -130,6 +130,9 @@ struct fat_item* fat16_find_item_in_dir(struct disk* disk, struct fat_directory*
 void format_83_to_string(struct fat_directory_item* item, char *out, int max);
 struct fat_directory_item *fat16_clone_dir_item(struct fat_directory_item *src, size_t size);
 
+int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out);
+
 void fat16_free_dir(struct fat_directory* directory);
 void fat16_item_free(struct fat_item* item);
+int fat16_unresolve(struct disk *disk);
 #endif

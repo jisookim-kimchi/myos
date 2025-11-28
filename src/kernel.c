@@ -129,14 +129,15 @@ void kernel_main()
     if (fd)
     {
         print("File open!\n");
-        char buffer[20] = {0};
-        fread(fd, buffer, 1, 20);
+        char buffer[22] = {0};
+        fread(fd, buffer, 1, 22);
         print(buffer);
     }
     if (fd <= 0)
     {
         print("File open failed!\n");
     }
+    file_system_unresolve(get_disk(0));
     while (1)
     {
 

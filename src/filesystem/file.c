@@ -97,6 +97,11 @@ struct filesystem* file_system_resolve(struct disk* disk)
     return fs;
 }
 
+int file_system_unresolve(struct disk* disk)
+{
+    return disk->filesystem->unresolve(disk);
+}
+
 FILE_MODE get_filemode(const char *str)
 {
     FILE_MODE mode = FILE_MODE_INVALID;
@@ -192,23 +197,21 @@ out:
     return res;
 }
 
+//fd : file descriptor, buffer : output buffer, size : size of each element, nmemb :  how many times to read
 int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb)
 {
-    int res = 0;
     if (size == 0 || nmemb == 0 || fd < 1)
-    {
-        res = MYOS_INVALID_ARG;
-        goto out;
-    }
-    struct file_descriptor* desc = get_file_descriptor(fd);
+        return -MYOS_INVALID_ARG;
+
+    struct file_descriptor *desc = get_file_descriptor(fd);
     if (!desc)
+        return -MYOS_INVALID_ARG;
+
+    int bytes = desc->filesystem->read(desc->disk, desc->pos, desc->private, size, nmemb, buffer);
+    if (bytes > 0)
     {
-        res = -MYOS_INVALID_ARG;
-        goto out;
+        desc->pos += bytes;
+        return bytes / size;
     }
-
-    res = desc->filesystem->read(desc->disk, desc->pos, desc->private, size, nmemb, buffer);
-
-out:
-    return res;
+    return bytes;
 }
