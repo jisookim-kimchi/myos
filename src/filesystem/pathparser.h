@@ -1,12 +1,11 @@
 #ifndef PATHPARSER_H
 #define PATHPARSER_H
 
-#define MYOS_MAX_PATH_LENGTH 108
-
 #include "../string/string.h"
 #include "../memory/memory.h"
 #include "../status.h"
 #include "../memory/heap/kernel_heap.h"
+#include "../config.h"
 
 typedef struct path_root
 {

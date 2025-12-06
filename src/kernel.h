@@ -19,5 +19,5 @@ size_t strlen(const char *str);
 void print(const char *str);
 void init_terminal();
 void terminal_write_char(char c, uint8_t color);
-
+void panic(const char* msg);
 #endif

@@ -1,89 +1,58 @@
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/idt/idt.asm.o \
-		./build/memory/memory.o ./build/idt/idt.o ./build/io/io.asm.o \
-		./build/memory/heap/heap.o ./build/memory/heap/kernel_heap.o \
-		./build/memory/paging/paging.o ./build/memory/paging/paging.asm.o \
-		./build/disk/disk.o ./build/disk/streamer.o ./build/filesystem/pathparser.o \
-		./build/filesystem/file.o ./build/string/string.o ./build/filesystem/fat16.o \
+BUILD_DIR := ./build
+BIN_DIR := ./bin
+SRC_DIR := ./src
 
-INCLUDES = -I./src/
+FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm.o \
+		$(BUILD_DIR)/memory/memory.o $(BUILD_DIR)/idt/idt.o $(BUILD_DIR)/io/io.asm.o \
+		$(BUILD_DIR)/memory/heap/heap.o $(BUILD_DIR)/memory/heap/kernel_heap.o \
+		$(BUILD_DIR)/memory/paging/paging.o $(BUILD_DIR)/memory/paging/paging.asm.o \
+		$(BUILD_DIR)/disk/disk.o $(BUILD_DIR)/disk/streamer.o $(BUILD_DIR)/filesystem/pathparser.o \
+		$(BUILD_DIR)/filesystem/file.o $(BUILD_DIR)/string/string.o $(BUILD_DIR)/filesystem/fat16.o \
+		$(BUILD_DIR)/gdt/gdt.o $(BUILD_DIR)/gdt/gdt.asm.o \
+		$(BUILD_DIR)/task/tss.asm.o \
+		$(BUILD_DIR)/task/task.o \
+		$(BUILD_DIR)/task/process.o \
+		$(BUILD_DIR)/task/task.asm.o
+
+INCLUDES = -I$(SRC_DIR)/
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+	
+.PHONY: all clean
 
-#if : input file 
-#of : output file
-#dd : copy and convert a file
-all: ./bin/boot.bin ./bin/kernel.bin
-	dd if=./bin/boot.bin of=./bin/myos.bin
-	dd if=./bin/kernel.bin >> ./bin/myos.bin
-	dd if=/dev/zero bs=1048576 count=16 >> ./bin/myos.bin
+all: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin $(BIN_DIR)/myos.bin programs
 
-	# mount the myos.bin file to /mnt/d
-	sudo mount -t vfat ./bin/myos.bin /mnt/d
-	#copy a file over
-	sudo cp ./test.txt /mnt/d/
+$(BIN_DIR)/myos.bin: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin programs
+	rm -rf $(BIN_DIR)/myos.bin
+	dd if=$(BIN_DIR)/boot.bin of=$(BIN_DIR)/myos.bin
+	dd if=$(BIN_DIR)/kernel.bin >> $(BIN_DIR)/myos.bin
+	dd if=/dev/zero bs=1048576 count=16 >> $(BIN_DIR)/myos.bin
+	sudo mount -t vfat $(BIN_DIR)/myos.bin /mnt/d
+	sudo cp ./test.txt /mnt/d
+	sudo cp ./src/programs/blank/blank.bin /mnt/d
 	sudo umount /mnt/d
 
-./bin/kernel.bin: $(FILES)
-	i686-elf-ld -g -relocatable $(FILES) -o ./build/kernelfull.o
-	i686-elf-gcc $(FLAGS) -T ./src/linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o
+$(BIN_DIR)/kernel.bin: $(FILES)
+	i686-elf-ld -g -relocatable $(FILES) -o $(BUILD_DIR)/kernelfull.o
+	i686-elf-gcc $(FLAGS) -T $(SRC_DIR)/linker.ld -o $(BIN_DIR)/kernel.bin -ffreestanding -O0 -nostdlib $(BUILD_DIR)/kernelfull.o
 
-./bin/boot.bin: ./src/boot/boot.asm
-	nasm -f bin ./src/boot/boot.asm -o ./bin/boot.bin
+$(BIN_DIR)/boot.bin: $(SRC_DIR)/boot/boot.asm
+	mkdir -p $(BIN_DIR)
+	nasm -f bin $(SRC_DIR)/boot/boot.asm -o $(BIN_DIR)/boot.bin
 
-./build/kernel.asm.o: ./src/kernel.asm
-	nasm -f elf -g ./src/kernel.asm -o ./build/kernel.asm.o
+$(BUILD_DIR)/%.asm.o: $(SRC_DIR)/%.asm
+	mkdir -p $(dir $@)
+	nasm -f elf -g $< -o $@
 
-./build/kernel.o: ./src/kernel.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/kernel.c -o ./build/kernel.o
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(dir $@)
+	i686-elf-gcc $(INCLUDES) $(FLAGS) -I $(dir $<) -std=gnu99 -c $< -o $@
 
-./build/idt/idt.asm.o: ./src/idt/idt.asm
-	nasm -f elf -g ./src/idt/idt.asm -o ./build/idt/idt.asm.o
+programs:
+	cd ./src/programs/blank && $(MAKE) all
 
-./build/idt/idt.o: ./src/idt/idt.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/idt -std=gnu99 -c ./src/idt/idt.c -o ./build/idt/idt.o
+programs_clean:
+	cd ./src/programs/blank && $(MAKE) clean
 
-./build/memory/memory.o: ./src/memory/memory.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/memory -std=gnu99 -c ./src/memory/memory.c -o ./build/memory/memory.o
-
-./build/io/io.asm.o: ./src/io/io.asm
-	nasm -f elf -g ./src/io/io.asm -o ./build/io/io.asm.o
-
-./build/memory/heap/heap.o: ./src/memory/heap/heap.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/memory/heap -std=gnu99 -c ./src/memory/heap/heap.c -o ./build/memory/heap/heap.o
-
-./build/memory/heap/kernel_heap.o: ./src/memory/heap/kernel_heap.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/memory/heap -std=gnu99 -c ./src/memory/heap/kernel_heap.c -o ./build/memory/heap/kernel_heap.o
-
-./build/memory/paging/paging.o: ./src/memory/paging/paging.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/memory/paging -std=gnu99 -c ./src/memory/paging/paging.c -o ./build/memory/paging/paging.o
-
-./build/memory/paging/paging.asm.o: ./src/memory/paging/paging.asm
-	nasm -f elf -g ./src/memory/paging/paging.asm -o ./build/memory/paging/paging.asm.o
-
-./build/disk/disk.o: ./src/disk/disk.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/disk -std=gnu99 -c ./src/disk/disk.c -o ./build/disk/disk.o
-
-./build/disk/streamer.o : ./src/disk/streamer.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/disk -std=gnu99 -c ./src/disk/streamer.c -o ./build/disk/streamer.o
-
-./build/filesystem/pathparser.o : ./src/filesystem/pathparser.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/filesystem -std=gnu99 -c ./src/filesystem/pathparser.c -o ./build/filesystem/pathparser.o
-
-./build/filesystem/file.o : ./src/filesystem/file.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/filesystem -std=gnu99 -c ./src/filesystem/file.c -o ./build/filesystem/file.o
-
-./build/filesystem/fat16.o : ./src/filesystem/fat16.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/filesystem -std=gnu99 -c ./src/filesystem/fat16.c -o ./build/filesystem/fat16.o
-
-./build/string/string.o : ./src/string/string.c
-	i686-elf-gcc $(INCLUDES) $(FLAGS) -I ./src/string -std=gnu99 -c ./src/string/string.c -o ./build/string/string.o
-
-clean:
-	rm -rf ./bin/boot.bin
-	rm -rf ./bin/kernel.bin
-	rm -rf ./bin/myos.bin
-	rm -rf $(FILES)
-	rm -rf ./build/kernelfull.o
-
-re:
-	make clean
-	make all
+clean: programs_clean
+	rm -rf $(BIN_DIR)/*
+	rm -rf $(BUILD_DIR)/*

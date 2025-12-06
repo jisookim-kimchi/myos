@@ -122,6 +122,8 @@ struct fat_private
     struct disk_streamer* directory_stream;
 };
 
+
+
 filesystem_t* fat16_init();
 void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode);
 int fat16_resolve(struct disk* disk);
@@ -135,4 +137,7 @@ int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t 
 void fat16_free_dir(struct fat_directory* directory);
 void fat16_item_free(struct fat_item* item);
 int fat16_unresolve(struct disk *disk);
+int fat16_seek(void *private, int offset, FILE_SEEK_MODE seek_mode);
+int fat16_stat(void *private, struct file_stat *stat);
+int fat16_close(void *private);
 #endif

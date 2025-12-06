@@ -90,3 +90,74 @@ int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val)
 
     return 0;
 }
+
+void paging_free_4gb(struct paging_4gb_chunk* chunk)
+{
+    for (int i = 0; i < 1024; i++)
+    {
+        uint32_t entry = chunk->directory_entry[i];
+        uint32_t* table = (uint32_t*)(entry & 0xfffff000); //low bits(12bits) set to 0 because they are flags
+        kernel_free(table);
+    }
+
+    kernel_free(chunk->directory_entry);
+    kernel_free(chunk);
+}
+
+void* paging_align_address(void* ptr)
+{
+    if ((uint32_t)ptr % PAGING_PAGE_SIZE_BYTES)
+    {
+        return (void*)((uint32_t)ptr + PAGING_PAGE_SIZE_BYTES - ((uint32_t)ptr % PAGING_PAGE_SIZE_BYTES));
+    }
+    
+    return ptr;
+}
+
+
+int paging_map(uint32_t* directory, void* virt, void* phys, int flags)
+{
+    if (((unsigned int)virt % PAGING_PAGE_SIZE_BYTES) || ((unsigned int)phys % PAGING_PAGE_SIZE_BYTES))
+    {
+        return -MYOS_INVALID_ARG;
+    }
+    return paging_set(directory, virt, (uint32_t)phys | flags);
+}
+
+int paging_map_range(uint32_t* directory, void* virt, void* phys,
+                     int count, int flags)
+{
+    int res = 0;
+    for (int i = 0; i < count; i++)
+    {
+        res = paging_map(directory, virt, phys, flags);
+        if (res != 0)
+            break;
+        virt = (void *)((uintptr_t)virt + PAGING_PAGE_SIZE_BYTES);
+        phys = (void *)((uintptr_t)phys + PAGING_PAGE_SIZE_BYTES);
+    }
+    return res;
+}
+
+static int check_page_alignment(void *addr)
+{
+    return ((uintptr_t)addr % PAGING_PAGE_SIZE_BYTES) ? -MYOS_INVALID_ARG : 0;
+}
+
+//연속된 메모리 
+int paging_map_to(uint32_t *directory, void *virt, void *phys, void *phys_end, int flags)
+{
+    if (check_page_alignment(virt) ||
+        check_page_alignment(phys) ||
+        check_page_alignment(phys_end))
+        return -MYOS_INVALID_ARG;
+
+    if ((uint32_t)phys_end < (uint32_t)phys)
+    {
+        return -MYOS_IO_ERROR;
+    }
+
+    uint32_t total_bytes = phys_end - phys;
+    int total_pages = total_bytes / PAGING_PAGE_SIZE_BYTES;
+    return paging_map_range(directory, virt, phys, total_pages, flags);
+}

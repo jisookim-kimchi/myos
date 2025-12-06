@@ -78,6 +78,42 @@ int ft_strcmp(const char *s1, const char *s2)
     return (unsigned char)*s1 - (unsigned char)*s2;
 }
 
+int ft_strncpy(char *dest, const char *src, int n)
+{
+    int i = 0;
+    while (i < n && src[i] != '\0')
+    {
+        dest[i] = src[i];
+        i++;
+    }
+    while (i < n)
+    {
+        dest[i] = '\0';
+        i++;
+    }
+    return i;
+}
+
+int ft_strlcpy(char *dest, const char *src, size_t dest_size)
+{
+    size_t i = 0;
+    if (dest_size == 0)
+    {
+        while (src[i] != '\0')
+            i++;
+        return i;
+    }
+    while (i + 1 < dest_size && src[i] != '\0')
+    {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+    while (src[i] != '\0')
+        i++;
+    return i;
+}
+
 int ft_strnlen_terminator(const char* str, int max, char terminator)
 {
     int i = 0;
@@ -118,3 +154,4 @@ char ft_tolower(char s1)
 
     return s1;
 }
+

@@ -73,8 +73,9 @@ static int make_new_fd(struct file_descriptor** out_fd)
 
 static struct file_descriptor* get_file_descriptor(int fd)
 {
-    if (fd <= 0 || fd > MYOS_MAX_FILE_DESCRIPTORS)
+    if (fd < 0 || fd > MYOS_MAX_FILE_DESCRIPTORS)
     {
+        print("Invalid file descriptor in file.c get_file_descriptor()\n");
         return NULL;
     }
 
@@ -133,7 +134,6 @@ int fopen(const char* filename, const char* mode)
     if (!root_path)
     {
         res = -MYOS_INVALID_ARG;
-        print("0\n");
         goto out;
     }
 
@@ -141,14 +141,12 @@ int fopen(const char* filename, const char* mode)
     if (!root_path->first)
     {
         res = -MYOS_INVALID_ARG;
-        print("1\n");
         goto out;
     }
     struct disk *d = get_disk(root_path->drive_number);
     if (!d)
     {
         res = -MYOS_IO_ERROR;
-        print("2\n");
         goto out;
     }
     if (!d->filesystem)
@@ -161,7 +159,6 @@ int fopen(const char* filename, const char* mode)
     if (filemode == FILE_MODE_INVALID)
     {
         res = -MYOS_IO_ERROR;
-        print("3\n");
         goto out;
     }
     
@@ -169,7 +166,6 @@ int fopen(const char* filename, const char* mode)
     if (ISERR(fd_private_data))
     {
         res = ERROR_I(fd_private_data);
-        print("4\n");
         goto out;
     }
     struct file_descriptor* desc = 0;
@@ -177,7 +173,6 @@ int fopen(const char* filename, const char* mode)
     res = make_new_fd(&desc);
     if (res < 0)
     {
-        print("5\n");
         goto out;
 
     }
@@ -188,12 +183,6 @@ int fopen(const char* filename, const char* mode)
     res = desc->index;
 
 out:
-    // fopen shouldnt return negative values
-    if (res < 0)
-    {
-        res = 0;
-    }
-
     return res;
 }
 
@@ -214,4 +203,64 @@ int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb)
         return bytes / size;
     }
     return bytes;
+}
+
+int fseek(int fd, int offset, FILE_SEEK_MODE mode)
+{
+    int res = 0;
+    struct file_descriptor *desc = get_file_descriptor(fd);
+    if (!desc)
+    {
+        res = -MYOS_INVALID_ARG;
+        goto out;
+    }
+    
+    res = desc->filesystem->seek(desc->private, offset, mode);
+    if (res >= 0)
+    {
+        desc->pos = res;
+        res = 0;
+    }
+out:
+    return res;
+}
+
+int fstat(int fd,  struct file_stat* stat)
+{
+    int res = 0;
+    struct file_descriptor *desc = get_file_descriptor(fd);
+    if (!desc)
+    {
+        print("fstat: invalid fd in file.c\n");
+        res = -MYOS_IO_ERROR;
+        goto out;
+    }
+    
+    res = desc->filesystem->stat(desc->private, stat);
+    if (res < 0)
+    {
+        print("fstat: stat failed in file.c\n");
+        goto out;
+    }
+out:
+    return res;
+}
+
+int fclose(int fd)
+{
+    int res = 0;
+    struct file_descriptor *desc = get_file_descriptor(fd);
+    if (!desc)
+    {
+        return -MYOS_INVALID_ARG;
+    }
+    res = desc->filesystem->close(desc->private);
+    
+    if (file_descriptors[fd - 1] == desc)
+    {
+        file_descriptors[fd - 1] = 0;
+    }
+    
+    kernel_free(desc);
+    return res;
 }

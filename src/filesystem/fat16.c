@@ -17,6 +17,9 @@ filesystem_t fat16_filesystem =
     .resolve = fat16_resolve,
     .open = fat16_open,
     .read = fat16_read,
+    .seek = fat16_seek,
+    .stat = fat16_stat,
+    .close = fat16_close,
     .unresolve = fat16_unresolve,
 };
 
@@ -281,10 +284,14 @@ struct fat_item *fat16_find_item_in_dir(struct disk *disk, struct fat_directory 
         
         // Convert 8.3 entry to string
         format_83_to_string(&directory->item[i], tempfile, sizeof(tempfile));
+        // print("Checking file: %s against %s\n", tempfile, name);
 
         if (ft_istrncmp(tempfile, name, ft_strlen(name)) == 0)
         {
             // Found it!
+            print("Found file : ");
+            print(tempfile);
+            print("\n");
             item = fat16_new_item_from_directory_item(disk, &directory->item[i]);
             break;
         }
@@ -645,3 +652,89 @@ int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t 
                                out);
 }
 
+int fat16_seek(void *private, int offset, FILE_SEEK_MODE seek_mode)
+{
+    struct fat_file_descriptor *desc = private;
+    struct fat_item* desc_item = desc->item;
+
+    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+        return -MYOS_INVALID_ARG;
+
+    int32_t new_pos = (int32_t)desc->pos;
+
+    switch (seek_mode)
+    {
+        case FILE_SEEK_SET:
+            new_pos = offset;
+            break;
+        case FILE_SEEK_END:
+            new_pos = (int32_t)desc_item->dir_item->filesize + offset; // Relative to the end of the file
+            break;
+        case FILE_SEEK_CUR:
+            new_pos += offset;
+            break;
+        default:
+            return -MYOS_INVALID_ARG;
+    }
+
+    if (new_pos < 0 || new_pos > (int32_t)desc_item->dir_item->filesize)
+    {
+        return -MYOS_IO_ERROR;
+    }
+
+    desc->pos = (uint32_t)new_pos;
+    return desc->pos;
+}
+
+int fat16_stat(void *private, struct file_stat *stat)
+{
+    struct fat_file_descriptor *desc = private;
+    struct fat_item* desc_item = desc->item;
+
+    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+    {
+        return -MYOS_INVALID_ARG;
+    }
+
+    stat->size = desc_item->dir_item->filesize;
+    stat->mode = 0x00;
+
+    if (desc_item->dir_item->attribute & FAT_FILE_READ_ONLY)
+    {
+        stat->mode |= FILE_STAT_READ_ONLY;
+    }
+    if (desc_item->dir_item->attribute & FAT_FILE_SUBDIRECTORY)
+    {
+        stat->mode |= FILE_STAT_DIRECTORY;
+    }
+    // if (desc_item->dir_item->attribute & FAT_FILE_HIDDEN)
+    // {
+    //     stat->mode |= FILE_STAT_HIDDEN;
+    // }
+    // if (desc_item->dir_item->attribute & FAT_FILE_SYSTEM)
+    // {
+    //     stat->mode |= FILE_STAT_SYSTEM;
+    // }
+    // if (desc_item->dir_item->attribute & FAT_FILE_VOLUME_LABEL)
+    // {
+    //     stat->mode |= FILE_STAT_VOLUME_LABEL;
+    //}
+    // if (desc_item->dir_item->attribute & FAT_FILE_ARCHIVED)
+    // {
+    //     stat->mode |= FILE_STAT_ARCHIVE;
+    // }
+    return 0;
+}
+
+int fat16_close(void *private)
+{
+    struct fat_file_descriptor *desc = private;
+    struct fat_item* desc_item = desc->item;
+
+    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+        return -MYOS_INVALID_ARG;
+
+    fat16_item_free(desc_item);
+    kernel_free(desc);
+    return 0;
+}
