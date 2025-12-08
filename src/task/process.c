@@ -2,6 +2,7 @@
 #include "../memory/memory.h"
 #include "../filesystem/file.h"
 #include "../string/string.h"
+#include "../memory/heap/kernel_heap.h"
 
 
 // The current process that is running
@@ -90,7 +91,7 @@ int process_map_memory(struct process* process)
 int process_map_binary(struct process *proc)
 {
     int res = 0;
-    res = paging_map_to(proc->task->page_directory->directory_entry, 
+    res = paging_map_to(proc->task->page_directory, 
                         (void*) MYOS_PROGRAM_VIRTUAL_ADDRESS,
                         proc->ptr,
                         paging_align_address(proc->ptr + proc->size),

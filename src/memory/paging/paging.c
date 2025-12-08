@@ -43,10 +43,10 @@ uint32_t *get_paging_4gb_dir(paging_4gb_chunk_t* chunk)
 }
 
 //페이지 디렉토리를 바꾸는 함수, 페이징 시스템에서 "어떤 가상 주소 공간을 사용할지" 선택하는 역할입니다.
-void paging_switch(uint32_t* dir)
+void paging_switch(paging_4gb_chunk_t* dir)
 {
-    paging_load_dir(dir);
-    cur_dir = dir;
+    paging_load_dir(dir->directory_entry);
+    cur_dir = dir->directory_entry;
 }
 
 bool is_paging_aligned(void *addr)
@@ -115,16 +115,16 @@ void* paging_align_address(void* ptr)
 }
 
 
-int paging_map(uint32_t* directory, void* virt, void* phys, int flags)
+int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags)
 {
     if (((unsigned int)virt % PAGING_PAGE_SIZE_BYTES) || ((unsigned int)phys % PAGING_PAGE_SIZE_BYTES))
     {
         return -MYOS_INVALID_ARG;
     }
-    return paging_set(directory, virt, (uint32_t)phys | flags);
+    return paging_set(directory->directory_entry, virt, (uint32_t)phys | flags);
 }
 
-int paging_map_range(uint32_t* directory, void* virt, void* phys,
+int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys,
                      int count, int flags)
 {
     int res = 0;
@@ -145,7 +145,7 @@ static int check_page_alignment(void *addr)
 }
 
 //연속된 메모리 
-int paging_map_to(uint32_t *directory, void *virt, void *phys, void *phys_end, int flags)
+int paging_map_to(paging_4gb_chunk_t *directory, void *virt, void *phys, void *phys_end, int flags)
 {
     if (check_page_alignment(virt) ||
         check_page_alignment(phys) ||

@@ -45,7 +45,7 @@ task_return:
     mov fs, ax
     mov gs, ax
 
-    push dword [esp+24]
+    push ebx
     call restore_registers
     add esp, 4
 

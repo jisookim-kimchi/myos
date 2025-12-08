@@ -104,10 +104,11 @@ void task_delete(struct task* task)
 int task_switch(struct task* task)
 {
     task_cur = task;
-    paging_switch(task->page_directory->directory_entry);
+    paging_switch(task->page_directory);
     return 0;
 }
 
+//change to user page.
 int task_page()
 {
     user_registers();
@@ -124,4 +125,27 @@ void task_run_first_ever_task()
 
     task_switch(task_head);
     task_return(&task_head->regs);
+}
+
+//save registers
+void save_registers(struct interrupt_frame *frame)
+{
+    if (!get_cur_task())
+    {
+        panic("No current task to save\n");
+    }
+
+    struct task *task = get_cur_task();
+    task->regs.ip = frame   ->ip;
+    task->regs.cs = frame->cs;
+    task->regs.flags = frame->flags;
+    task->regs.esp = frame->esp;
+    task->regs.ss = frame->ss;
+    task->regs.eax = frame->eax;
+    task->regs.ebp = frame->ebp;
+    task->regs.ebx = frame->ebx;
+    task->regs.ecx = frame->ecx;
+    task->regs.edi = frame->edi;
+    task->regs.edx = frame->edx;
+    task->regs.esi = frame->esi;
 }

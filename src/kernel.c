@@ -11,10 +11,14 @@
 #include "task/tss.h"
 #include "filesystem/pathparser.h"
 #include "task/process.h"
+#include "string/string.h"
+#include "isr80h/isr80h.h"
 
 uint16_t *video_memory = 0;
 uint16_t terminal_row = 0;
 uint16_t terminal_column = 0;
+
+static paging_4gb_chunk_t *kernel_chunk = 0;
 
 uint16_t terminal_make_char(char c, uint8_t color)
 {
@@ -72,6 +76,12 @@ void panic(const char* msg)
     print(msg);
     while(1) {}
 }
+ 
+void change_to_kernel_page(void)
+{
+    kernel_registers();
+    paging_switch(kernel_chunk);
+}
 
 struct tss tss;
 struct gdt gdt_real[MYOS_TOTAL_GDT_SEGMENTS];
@@ -85,8 +95,6 @@ struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] =
     {.base = (uint32_t)&tss, .limit=sizeof(tss), .type = 0xE9}      // TSS Segment
 };
 
-//for paging test
-static paging_4gb_chunk_t *chunk = 0;
 void kernel_main()
 {
     init_terminal(); // 화면을 회색 배경으로 초기화
@@ -125,15 +133,16 @@ void kernel_main()
     //     print("Kernel malloc succeeded!\n");
     // }
 
-    chunk = paging_new_4gb(PAGING_PRESENT | PAGING_WRITEABLE | PAGING_USER_ACCESS);
+    kernel_chunk = paging_new_4gb(PAGING_PRESENT | PAGING_WRITEABLE | PAGING_USER_ACCESS);
     
-    paging_switch(chunk->directory_entry);
+    paging_switch(kernel_chunk);
     
     //char *ptr = kernel_zero_alloc(4096);
     //paging_set(get_paging_4gb_dir(chunk), (void*)0x1000, (uint32_t)ptr | PAGING_USER_ACCESS | PAGING_PRESENT | PAGING_WRITEABLE);
 
     enable_paging();
 
+    isr80h_register_command_call();
     // char *ptr2 = (char*)0x1000;
     // ptr2[0] = 'A';
     // ptr2[1] = 'B';

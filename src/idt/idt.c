@@ -2,14 +2,17 @@
 #include "../config.h"
 #include "../memory/memory.h"
 #include "../kernel.h"
+#include "../task/task.h"
 #include "../io/io.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 struct idtr idtr_descriptor;
+static ISR80_COMMAND isr80h_commands[MYOS_MAX_ISR80H_COMMANDS];
 
 extern void idt_load(struct idtr *ptr);
 extern void int21h();
-extern void int20h();
+//extern void int20h();
+extern void isr80h_wrapper();
 extern void no_interrupts();
 
 void no_interrupts_handler()
@@ -61,5 +64,54 @@ void idt_init()
     idt_set(0, idt_zero);
     //idt_set(0x20, int20h);      // 타이머 인터럽트 (IRQ 0)
     idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
+    idt_set(0x80, isr80h_wrapper);      // 시스템 콜
     idt_load(&idtr_descriptor);
 }
+
+//함수배열에 함수를 넣고
+void isr80h_register_command(int ask_id, ISR80_COMMAND command)
+{
+    if (ask_id < 0 || ask_id >= MYOS_MAX_ISR80H_COMMANDS)
+    {
+        panic("The command is out of bound\n");
+    }
+    
+    if (isr80h_commands[ask_id])
+    {
+        panic("Your attempting to overwrite an existing command\n");
+    }
+    isr80h_commands[ask_id] = command;
+}
+
+//함수배열에 들어있는 element를 가져와서 실행.
+void *isr80h_handle_command(int ask, struct interrupt_frame* frame)
+{
+    // TODO: Implement system call handling based on 'ask' value
+    if (ask < 0 || ask >= MYOS_MAX_ISR80H_COMMANDS)
+    {
+        return NULL;
+    }
+    
+    ISR80_COMMAND command_func = isr80h_commands[ask];
+    if(!command_func)
+    {
+        return NULL;
+    }
+    return command_func(frame);
+}
+
+//1.page directory change to kernel page.
+//2.register save.
+//3.system call comannd call
+//4.again recovery to user page.
+void* isr80h_handler(struct interrupt_frame* frame)
+{
+    void* res = NULL;
+    int ask = frame->eax; // System call command is in EAX
+    change_to_kernel_page();
+    save_registers(frame);
+    res = isr80h_handle_command(ask, frame);
+    task_page();
+    return res;
+}
+

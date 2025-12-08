@@ -20,4 +20,6 @@ void print(const char *str);
 void init_terminal();
 void terminal_write_char(char c, uint8_t color);
 void panic(const char* msg);
+void change_to_kernel_page(void);
+void kernel_registers();
 #endif

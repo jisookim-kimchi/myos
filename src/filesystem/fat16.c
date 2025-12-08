@@ -5,6 +5,7 @@
 #include "stdint.h"
 #include "status.h"
 #include "kernel.h"
+#include "../memory/memory.h"
 
 static int fat16_get_cluster_size(struct disk* disk,struct fat_private* private);
 static struct fat_directory* fat16_load_for_sub_directory(struct disk* disk, struct fat_directory_item* item);

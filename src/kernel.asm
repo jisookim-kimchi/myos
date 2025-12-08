@@ -2,6 +2,7 @@
 
 global _start
 ;global problem
+global kernel_registers
 extern kernel_main
 
 CODE_SEG equ 0x08
@@ -59,6 +60,17 @@ _start:
     sti ; enable interrupts
     call kernel_main
     jmp $
+
+;in kernel there are just 2 selectors, kernel code and kernel data.
+;so we can use this selectors to switch to kernel mode.
+
+kernel_registers:
+    mov ax, DATA_SEG
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    ret  
 
 ; IDT 테스트를 위한 Division by Zero 인터럽트 발생 함수
 ;problem:

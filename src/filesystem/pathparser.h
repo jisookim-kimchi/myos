@@ -1,11 +1,8 @@
 #ifndef PATHPARSER_H
 #define PATHPARSER_H
 
-#include "../string/string.h"
-#include "../memory/memory.h"
-#include "../status.h"
-#include "../memory/heap/kernel_heap.h"
-#include "../config.h"
+#include <stdint.h>
+#include <stddef.h>
 
 typedef struct path_root
 {

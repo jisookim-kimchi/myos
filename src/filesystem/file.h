@@ -1,6 +1,7 @@
 #ifndef FILE_H
 #define FILE_H
 
+#include <stdint.h>
 #include "pathparser.h"
 
 typedef unsigned int FILE_SEEK_MODE;

@@ -3,6 +3,26 @@
 
 #include <stdint.h>
 
+struct interrupt_frame;
+typedef void* (*ISR80_COMMAND)(struct interrupt_frame *frame);
+
+struct interrupt_frame
+{
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t reserved;
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+    uint32_t ip;
+    uint32_t cs;
+    uint32_t flags;
+    uint32_t esp;
+    uint32_t ss;
+} __attribute__((packed));
+
 struct idt_descriptor
 {
     uint16_t bottom_offset; // 0 ~ 15 (하위 16비트가 먼저!)
@@ -23,5 +43,8 @@ void idt_set(int interrupt_number, void *address);
 void idt_zero();
 void enable_interrupts();
 void disable_interrupts();
-
+void registers_save(struct interrupt_frame *frame);
+void isr80h_register_command(int ask_id, ISR80_COMMAND command);
+void *isr80h_handle_command(int ask, struct interrupt_frame* frame);
+void* isr80h_handler(struct interrupt_frame* frame);
 #endif

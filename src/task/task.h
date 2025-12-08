@@ -1,8 +1,12 @@
 #ifndef TASK_H
 #define TASK_H
 
+#include <stdint.h>
 #include "../config.h"
 #include "../memory/paging/paging.h"
+#include "../idt/idt.h"
+
+struct interrupt_frame;
 
 //to store the state of a task
 struct registers
@@ -47,5 +51,6 @@ void task_run_first_ever_task();
 void task_return(struct registers* regs);
 void restore_registers(struct registers* regs);
 void user_registers();
+void save_registers(struct interrupt_frame *frame);
 
 #endif

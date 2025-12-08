@@ -38,4 +38,7 @@
 #define MYOS_MAX_ALLOCATIONS 1024
 #define MYOS_MAX_PROCESSES 12
 
+//for isr80h commands interupt system routine
+#define MYOS_MAX_ISR80H_COMMANDS 1024
+
 #endif

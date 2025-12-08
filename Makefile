@@ -12,7 +12,9 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/tss.asm.o \
 		$(BUILD_DIR)/task/task.o \
 		$(BUILD_DIR)/task/process.o \
-		$(BUILD_DIR)/task/task.asm.o
+		$(BUILD_DIR)/task/task.asm.o \
+		$(BUILD_DIR)/isr80h/isr80h.o \
+		$(BUILD_DIR)/isr80h/misc.o
 
 INCLUDES = -I$(SRC_DIR)/
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc

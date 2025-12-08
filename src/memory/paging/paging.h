@@ -24,12 +24,13 @@ typedef struct paging_4gb_chunk
 
 paging_4gb_chunk_t* paging_new_4gb(uint8_t flags);
 uint32_t *get_paging_4gb_dir(paging_4gb_chunk_t* chunk);
-void paging_switch(uint32_t* dir);
+void paging_switch(paging_4gb_chunk_t* chunk);
 void enable_paging();
 int get_paging_indexes(void *virtual_addr, uint32_t *dir_index, uint32_t *table_index);
 int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val);
 void paging_free_4gb(struct paging_4gb_chunk* chunk);
 void* paging_align_address(void* ptr);
-int paging_map_to(uint32_t *directory, void *virt, void *phys, void *phys_end, int flags);
-
+int paging_map_to(paging_4gb_chunk_t *directory, void *virt, void *phys, void *phys_end, int flags);
+int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags);
+int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys, int count, int flags);
 #endif

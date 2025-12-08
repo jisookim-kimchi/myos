@@ -4,6 +4,9 @@
 #include "../memory/memory.h"
 #include "../kernel.h"
 #include "disk/disk.h"
+#include "../string/string.h"
+#include "../status.h"
+#include "../memory/heap/kernel_heap.h"
 
 
 struct filesystem* filesystems[MYOS_MAX_FILESYSTEMS];

@@ -1,4 +1,9 @@
 #include "pathparser.h"
+#include "../string/string.h"
+#include "../memory/memory.h"
+#include "../status.h"
+#include "../memory/heap/kernel_heap.h"
+#include "../config.h"
 
 static int path_valid_format(const char *filename)
 {
