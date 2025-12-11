@@ -9,9 +9,10 @@ global _start
 _start:
 
 label:
+    push 20
+    push 10
     mov eax, SYS_SUM
-    mov ebx, 10
-    mov ecx, 20
     int 0x80
+    add esp,8
 
     jmp $

@@ -77,7 +77,37 @@ void panic(const char* msg)
     while(1) {}
 }
  
+void itoa(int n, char s[]) {
+    int i, sign;
+    if ((sign = n) < 0) n = -n;
+    i = 0;
+    do { 
+        s[i++] = n % 10 + '0'; 
+    } while ((n /= 10) > 0);
+    if (sign < 0) s[i++] = '-';
+    s[i] = '\0';
+    
+    // reverse
+    int j, k;
+    char c;
+    for (j = 0, k = i - 1; j < k; j++, k--) {
+        c = s[j]; s[j] = s[k]; s[k] = c;
+    }
+}
+
+void print_int(int v) {
+    char buf[20];
+    itoa(v, buf);
+    print(buf);
+}
+
 void change_to_kernel_page(void)
+{
+    kernel_registers();
+    paging_switch(kernel_chunk);
+}
+
+void __attribute__((section(".entry"))) start(void)
 {
     kernel_registers();
     paging_switch(kernel_chunk);
@@ -143,53 +173,6 @@ void kernel_main()
     enable_paging();
 
     isr80h_register_command_call();
-    // char *ptr2 = (char*)0x1000;
-    // ptr2[0] = 'A';
-    // ptr2[1] = 'B';
-    // print(ptr2);
-    // print(ptr);
-
-    //disk_read_block(get_disk(0), 20, 4, &buf);
-
-    //enable the system interrupts;
-    //enable_interrupts();
-    
-    //print("Interrupts enabled.\n");
-    // path_root_t *root = parse_path("0:/bin/shell.exe", NULL);
-    // if (root)
-    // {
-    //    print("Path parsed successfully!\n");
-    // }
-    // else
-    // {
-    //     print("Path parsing failed!\n");
-    // }
-    // int fd = fopen("0:/test.txt", "r");
-    // char buffer[22] = {0};
-    // if (fd)
-    // {
-    //     // struct file_stat stat;
-    //     // if (fstat(fd, &stat) < 0)
-    //     // {
-    //     //     print("File stat failed!\n");
-    //     //     goto out;
-    //     // }
-    //     // print("File open!\n");
-    //     // int res = fseek(fd, 23, FILE_SEEK_SET);
-    //     // if (res < 0)
-    //     // {
-    //     //     print("File seek failed!\n");
-    //     //     goto out;
-    //     // }
-    //     fread(fd, buffer, 1, 22);
-    //     print(buffer);
-    // }
-    // if (fd <= 0)
-    // {
-    //     print("File open failed!\n");
-    // }
-    // fclose(fd);
-    // file_system_unresolve(get_disk(0));
 
     struct process *process = 0;
     int res = process_load("0:/blank.bin", &process);

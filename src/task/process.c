@@ -3,7 +3,7 @@
 #include "../filesystem/file.h"
 #include "../string/string.h"
 #include "../memory/heap/kernel_heap.h"
-
+#include "../kernel.h"
 
 // The current process that is running
 struct process* cur_process = NULL;
@@ -82,6 +82,11 @@ int process_map_memory(struct process* process)
 {
     int res = 0;
     res = process_map_binary(process);
+    if (res < 0)
+    {
+        return res;
+    }
+    paging_map_to(process->task->page_directory, (void*)MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_END, process->stack, paging_align_address(process->stack+MYOS_USER_PROGRAM_STACK_SIZE), PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
     return res;
 }
 

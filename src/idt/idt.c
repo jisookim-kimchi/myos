@@ -111,7 +111,7 @@ void* isr80h_handler(struct interrupt_frame* frame)
     change_to_kernel_page();
     save_registers(frame);
     res = isr80h_handle_command(ask, frame);
-    task_page();
+    paging_switch(get_cur_task()->page_directory);
     return res;
 }
 

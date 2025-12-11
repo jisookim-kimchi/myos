@@ -19,6 +19,7 @@ size_t strlen(const char *str);
 void print(const char *str);
 void init_terminal();
 void terminal_write_char(char c, uint8_t color);
+void print_int(int v);
 void panic(const char* msg);
 void change_to_kernel_page(void);
 void kernel_registers();

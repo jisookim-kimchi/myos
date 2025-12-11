@@ -195,8 +195,7 @@ out:
 
 void *my_malloc(heap_t *heap, size_t size)
 {
-    size_t required_size = heap_calculate_required_blocks(size);
-    uint32_t total_blocks = required_size / MYOS_HEAP_BLOCK_SIZE;
+    uint32_t total_blocks = heap_calculate_required_blocks(size);
     return heap_allocate_blocks(heap, total_blocks);
 }
 

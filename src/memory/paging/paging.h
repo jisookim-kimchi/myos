@@ -33,4 +33,5 @@ void* paging_align_address(void* ptr);
 int paging_map_to(paging_4gb_chunk_t *directory, void *virt, void *phys, void *phys_end, int flags);
 int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags);
 int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys, int count, int flags);
+uint32_t paging_get(uint32_t *directory, void *virt);
 #endif

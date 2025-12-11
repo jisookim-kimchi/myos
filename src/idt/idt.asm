@@ -31,11 +31,25 @@ idt_load:
 
 int21h:
     cli ; disable interrupts
+    
+    ; 세그먼트 레지스터 백업
+    push ds
+    push es
+    push fs
+    push gs
+    
     pushad ;all registers backup (before interrupt handling)
     call int21h_handler
     popad ; all registers restore (return to original state)
+    
+    ; 세그먼트 레지스터 복구
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    
     sti ; enable interrupts
-    ;iret ; return from interrupt (restore EFLAGS, CS, EIP)
+    iret ; return from interrupt (restore EFLAGS, CS, EIP)
 
 ;int20h:
     ;cli ; disable interrupts
@@ -47,16 +61,36 @@ int21h:
 
 no_interrupts:
     cli ; disable interrupts
+    
+    ; 세그먼트 레지스터 백업
+    push ds
+    push es
+    push fs
+    push gs
+    
     pushad ;all registers backup (before interrupt handling)
     call no_interrupts_handler
     popad ; all registers restore (return to original state)
+    
+    ; 세그먼트 레지스터 복구
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    
     sti ; enable interrupts
     iret ; return from interrupt (restore EFLAGS, CS, EIP)
 
 isr80h_wrapper:
     cli                 ; 인터럽트 끄기 (방해 금지)
     
-    pushad              ; 모든 레지스터(eax, ebx...)를 스택에 백업
+    ; 세그먼트 레지스터 백업
+    push ds
+    push es
+    push fs
+    push gs
+
+    pushad              ; 모든 범용 레지스터(eax, ebx...)를 스택에 백업 세그먼트 레지스터는 제외!
                         ; 왜? 커널이 일하다가 레지스터 값을 바꿀 수 있으니까,
                         ; 나중에 유저한테 돌아갈 때 복구해주려고.
     
@@ -65,7 +99,6 @@ isr80h_wrapper:
                         ; (struct registers* 처럼 접근 가능)
     
     call isr80h_handler ; C 함수 호출! (이제 진짜 일을 하러 감)
-                        ; 이 함수는 아직 안 만들었습니다. 이제 만들 겁니다.
     
     add esp, 4          ; 인자(push esp) 제거
     
@@ -76,5 +109,12 @@ isr80h_wrapper:
 
     mov [esp + 28], eax 
     popad               ; 백업해둔 레지스터 복구
+
+    ; 세그먼트 레지스터 복구
+    pop gs
+    pop fs
+    pop es
+    pop ds
+
     sti                 ; 인터럽트 켜기
     iret                ; 유저 모드로 복귀!

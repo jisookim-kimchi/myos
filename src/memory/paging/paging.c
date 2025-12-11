@@ -1,6 +1,6 @@
 #include "paging.h"
 #include "../heap/kernel_heap.h"
-
+#include "../../kernel.h"
 static uint32_t* cur_dir = 0;
 
 void paging_load_dir(uint32_t *dir);
@@ -70,25 +70,15 @@ out:
     return res;
 }
 
-int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val)
+//
+uint32_t paging_get(uint32_t *directory, void *virt)
 {
-    if (!is_paging_aligned(virtual_addr) || dir == NULL)
-    {
-        return -MYOS_INVALID_ARG;
-    }
-
     uint32_t dir_index = 0;
     uint32_t table_index = 0;
-    int res = get_paging_indexes(virtual_addr, &dir_index, &table_index);
-    if (res < 0)
-    {
-        return res;
-    }
-    uint32_t dir_entry = dir[dir_index];
-    uint32_t *table = (uint32_t*)(dir_entry & 0xFFFFF000);
-    table[table_index] = val;
-
-    return 0;
+    get_paging_indexes(virt, &dir_index, &table_index);
+    uint32_t entry = directory[dir_index];
+    uint32_t *table = (uint32_t*)(entry & 0xfffff000); //low bits(12bits) set to 0 because they are flags
+    return table[table_index];
 }
 
 void paging_free_4gb(struct paging_4gb_chunk* chunk)
@@ -114,7 +104,28 @@ void* paging_align_address(void* ptr)
     return ptr;
 }
 
+int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val)
+{
+    if (!is_paging_aligned(virtual_addr) || dir == NULL)
+    {
+        return -MYOS_INVALID_ARG;
+    }
 
+    uint32_t dir_index = 0;
+    uint32_t table_index = 0;
+    int res = get_paging_indexes(virtual_addr, &dir_index, &table_index);
+    if (res < 0)
+    {
+        return res;
+    }
+    uint32_t dir_entry = dir[dir_index];
+    uint32_t *table = (uint32_t*)(dir_entry & 0xFFFFF000);
+    table[table_index] = val;
+
+    return 0;
+}
+
+//virt addr mapping with phys addr 
 int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags)
 {
     if (((unsigned int)virt % PAGING_PAGE_SIZE_BYTES) || ((unsigned int)phys % PAGING_PAGE_SIZE_BYTES))
@@ -131,7 +142,7 @@ int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys,
     for (int i = 0; i < count; i++)
     {
         res = paging_map(directory, virt, phys, flags);
-        if (res != 0)
+        if (res < 0)
             break;
         virt = (void *)((uintptr_t)virt + PAGING_PAGE_SIZE_BYTES);
         phys = (void *)((uintptr_t)phys + PAGING_PAGE_SIZE_BYTES);
