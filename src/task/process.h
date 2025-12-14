@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "../config.h"
 #include "task.h"
+#include "../keyboard/keyboard.h"
 
 struct process
 {
@@ -22,6 +23,8 @@ struct process
     void *stack;
 
     uint32_t size;
+
+    struct keyboard keyboard;
 };
 
 int process_map_binary(struct process *proc);

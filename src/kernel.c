@@ -3,6 +3,7 @@
 #include "io/io.h"
 #include "memory/heap/kernel_heap.h"
 #include "memory/paging/paging.h"
+#include "keyboard/keyboard.h"
 #include "memory/memory.h"
 #include "disk/disk.h"
 #include "disk/streamer.h"
@@ -128,7 +129,7 @@ struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] =
 void kernel_main()
 {
     init_terminal(); // 화면을 회색 배경으로 초기화
-    print("Hello, Kernel World!\n");
+    //print("Hello, Kernel World!\n");
     
     ft_memset(gdt_real, 0x00, sizeof(gdt_real));
     kernel_gdt_to_cpu_gdt(gdt_real, gdt_structured, MYOS_TOTAL_GDT_SEGMENTS);

@@ -4,6 +4,7 @@
 #include "../kernel.h"
 #include "../task/task.h"
 #include "../io/io.h"
+#include "../keyboard/keyboard.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 struct idtr idtr_descriptor;
@@ -22,13 +23,13 @@ void no_interrupts_handler()
 
 void int21h_handler()
 {
-    print("\n*** KEYBOARD INTERRUPT CAUGHT! ***\n");
+    keyboard_handle_interrupt();
     outsb(0x20, 0x20); // PIC에 EOI 신호 전송
 }
 
 void int20h_handler()
 {
-    print("T"); // 타이머 틱마다 T 출력
+    //print("T"); // 타이머 틱마다 T 출력
     outsb(0x20, 0x20); // PIC에 EOI 신호 전송
 }
 

@@ -13,6 +13,11 @@ static struct process* processes[MYOS_MAX_PROCESSES] = {};
 static void process_init(struct process* process)
 {
     ft_memset(process, 0, sizeof(struct process));
+    // Keyboard buffer is zeroed by the memset above,
+    // explicitly ensuring head/tail are 0 is redundant but safe.
+    ft_memset(process->keyboard.key_buffer, 0, sizeof(process->keyboard.key_buffer));
+    process->keyboard.head = 0;
+    process->keyboard.tail = 0;
 }
 
 struct process* get_cur_process()

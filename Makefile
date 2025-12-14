@@ -14,7 +14,9 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/process.o \
 		$(BUILD_DIR)/task/task.asm.o \
 		$(BUILD_DIR)/isr80h/isr80h.o \
-		$(BUILD_DIR)/isr80h/misc.o
+		$(BUILD_DIR)/isr80h/misc.o \
+		$(BUILD_DIR)/isr80h/io.o \
+		$(BUILD_DIR)/keyboard/keyboard.o
 
 INCLUDES = -I$(SRC_DIR)/
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
@@ -46,6 +48,10 @@ $(BUILD_DIR)/%.asm.o: $(SRC_DIR)/%.asm
 	nasm -f elf -g $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(dir $@)
+	i686-elf-gcc $(INCLUDES) $(FLAGS) -I $(dir $<) -std=gnu99 -c $< -o $@
+
+$(BUILD_DIR)/keyboard/keyboard.o: $(SRC_DIR)/keyboard/keyboard.c
 	mkdir -p $(dir $@)
 	i686-elf-gcc $(INCLUDES) $(FLAGS) -I $(dir $<) -std=gnu99 -c $< -o $@
 
