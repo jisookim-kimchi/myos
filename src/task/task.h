@@ -8,6 +8,13 @@
 
 struct interrupt_frame;
 
+enum task_state
+{
+    TASK_RUNNING,
+    TASK_BLOCKED,
+    TASK_ZOMBIE,
+};
+
 //to store the state of a task
 struct registers
 {
@@ -27,6 +34,7 @@ struct registers
 };
 
 struct process;
+ 
 struct task
 {
     struct registers regs;               // renamed from "register"
@@ -35,6 +43,8 @@ struct task
     struct task *next;
     struct task *prev;
     struct process *process;
+    int state;
+    void *event_wait_channel;
 };
 
 int init_task(struct task* task, struct process* process);
@@ -56,4 +66,7 @@ void user_registers();
 void save_registers(struct interrupt_frame *frame);
 int copy_string_from_task(struct task* task, void* virtual, void* phys, int max);
 void* task_get_stack_item(struct task* task, int index);
+
+void task_block(void *event_wait_channel);
+void task_wakeup(void *event_wait_channel);
 #endif

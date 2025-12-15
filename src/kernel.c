@@ -40,6 +40,16 @@ void terminal_write_char(char c, uint8_t color)
         terminal_row++;
         return;
     }
+    if (c == 0x08) //backspace
+    {
+        if (terminal_column > 0)
+        {
+            terminal_column--;
+            terminal_write_char(' ', 0x0F); 
+            terminal_column--;
+        }
+        return;
+    }
     terminal_putchar(c, color, terminal_column, terminal_row);
     terminal_column++;
     if (terminal_column >= VGA_WIDTH)
@@ -139,7 +149,9 @@ void kernel_main()
 
     kernel_heap_init();
     idt_init();
-
+    keyboard_init();
+   
+    
     ft_memset(&tss, 0x00, sizeof(tss));
     tss.esp0 = 0x600000;
     tss.ss0 = MYOS_KERNEL_DATA_SELECTOR;

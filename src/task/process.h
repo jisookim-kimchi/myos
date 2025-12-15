@@ -33,5 +33,6 @@ int process_map_memory(struct process* process);
 int process_load_data(const char* filename, struct process* process);
 struct process* get_process(int pid);
 struct process* get_cur_process();
+void set_cur_process(struct process* process);
 int process_load(const char *filename, struct process **process);
 #endif

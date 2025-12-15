@@ -1,17 +1,12 @@
 section .asm
 
-extern int21h_handler
-;extern int20h_handler
-extern no_interrupts_handler
-extern isr80h_handler
+extern interrupt_handler
 
+global interrupt_table
 global enable_interrupts
 global disable_interrupts
-global int21h
-global int20h
+global halt
 global idt_load
-global no_interrupts
-global isr80h_wrapper
 
 enable_interrupts:
     sti
@@ -21,100 +16,79 @@ disable_interrupts:
     cli
     ret
 
-idt_load:
-    push ebp
-    mov ebp, esp ; esp : 스택의 맨 위 데이터
-    mov ebx, [ebp + 8] ; 첫 번째 인자: IDT 디스크립터 주소 8: 함수 호출 관리비용.
-    lidt [ebx]         ; IDT 로드 명령어
-    pop ebp
+halt:
+    hlt
     ret
 
-int21h:
-    cli ; disable interrupts
-    
-    ; 세그먼트 레지스터 백업
+idt_load:
+    push ebp
+    mov ebp, esp
+
+    mov ebx, [ebp+8]
+    lidt [ebx]
+    pop ebp    
+    ret
+
+; 1. Macro Definitions
+%macro INTERRUPT_NO_ERROR_CODE 1
+    global interrupt_%1
+    interrupt_%1:
+        push dword 0      ; Dummy error code
+        push dword %1     ; Interrupt Number
+        jmp interrupt_common_stub
+%endmacro
+
+%macro INTERRUPT_ERROR_CODE 1
+    global interrupt_%1
+    interrupt_%1:
+        push dword %1     ; Interrupt Number (Error code already pushed)
+        jmp interrupt_common_stub
+%endmacro
+
+; 2. Common Interrupt Stub
+interrupt_common_stub:
+    ; Create standard stack frame
     push ds
     push es
     push fs
     push gs
+    pushad              ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+
+    ; Load Kernel Data Segment
+    mov ax, 0x10   
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
     
-    pushad ;all registers backup (before interrupt handling)
-    call int21h_handler
-    popad ; all registers restore (return to original state)
+    ; Call C handler
+    push esp            ; Pass struct interrupt_frame* (points to stack top)
+    call interrupt_handler
+    add esp, 4          ; Pop argument
     
-    ; 세그먼트 레지스터 복구
+    ; Restore state
+    popad
     pop gs
     pop fs
     pop es
     pop ds
     
-    sti ; enable interrupts
-    iret ; return from interrupt (restore EFLAGS, CS, EIP)
+    ; Cleanup error code and interrupt number
+    add esp, 8
+    iret
 
-;int20h:
-    ;cli ; disable interrupts
-    ;pushad ;all registers backup (before interrupt handling)
-    ;call int20h_handler
-    ;popad ; all registers restore (return to original state)
-    ;sti ; enable interrupts
-    ;iret ; return from interrupt (restore EFLAGS, CS, EIP)
+; 3. Generate Interrupt Stubs
+%assign i 0
+%rep 512
+    INTERRUPT_NO_ERROR_CODE i
+    %assign i i+1
+%endrep
 
-no_interrupts:
-    cli ; disable interrupts
-    
-    ; 세그먼트 레지스터 백업
-    push ds
-    push es
-    push fs
-    push gs
-    
-    pushad ;all registers backup (before interrupt handling)
-    call no_interrupts_handler
-    popad ; all registers restore (return to original state)
-    
-    ; 세그먼트 레지스터 복구
-    pop gs
-    pop fs
-    pop es
-    pop ds
-    
-    sti ; enable interrupts
-    iret ; return from interrupt (restore EFLAGS, CS, EIP)
-
-isr80h_wrapper:
-    cli                 ; 인터럽트 끄기 (방해 금지)
-    
-    ; 세그먼트 레지스터 백업
-    push ds
-    push es
-    push fs
-    push gs
-
-    pushad              ; 모든 범용 레지스터(eax, ebx...)를 스택에 백업 세그먼트 레지스터는 제외!
-                        ; 왜? 커널이 일하다가 레지스터 값을 바꿀 수 있으니까,
-                        ; 나중에 유저한테 돌아갈 때 복구해주려고.
-    
-    push esp            ; 현재 스택 포인터(esp)를 인자로 넘김
-                        ; 이렇게 하면 C 함수에서 스택에 저장된 레지스터 값들을 읽을 수 있음
-                        ; (struct registers* 처럼 접근 가능)
-    
-    call isr80h_handler ; C 함수 호출! (이제 진짜 일을 하러 감)
-    
-    add esp, 4          ; 인자(push esp) 제거
-    
-    ; 중요: C 함수가 리턴한 값(eax)을 유저에게 전달해야 함.
-    ;C 언어(그리고 대부분의 컴파일러)의 약속(Calling Convention) 에 따르면: 함수의 리턴값(Return Value) 은 항상 EAX 레지스터에 저장됩니다.
-    ; 하지만 밑에서 popad를 하면 백업해둔 옛날 eax 값으로 덮어씌워짐.
-    ; 그래서 스택에 백업된 eax 자리에, 방금 받은 새 리턴값을 덮어쓰는 것임.
-
-    mov [esp + 28], eax 
-    popad               ; 백업해둔 레지스터 복구
-
-    ; 세그먼트 레지스터 복구
-    pop gs
-    pop fs
-    pop es
-    pop ds
-
-    sti                 ; 인터럽트 켜기
-    iret                ; 유저 모드로 복귀!
+section .data
+; 4. Pointer Table matches C declaration of "interrupt_table"
+interrupt_table:
+    %assign i 0
+    %rep 512
+        dd interrupt_%+i
+        %assign i i+1
+    %endrep

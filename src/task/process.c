@@ -34,6 +34,11 @@ struct process* get_process(int pid)
     return processes[pid];
 }
 
+void set_cur_process(struct process* process)
+{
+    cur_process = process;
+}
+
 int get_process_free_slot()
 {
     for (int i = 0; i < MYOS_MAX_PROCESSES; i++)

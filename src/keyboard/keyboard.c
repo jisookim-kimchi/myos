@@ -38,6 +38,7 @@ void keyboard_push(char c)
         process->keyboard.key_buffer[process->keyboard.head] = c; // 현재 head 위치에 저장
         process->keyboard.head = next_head; // head 한 칸 전진
     }
+    task_wakeup(&process->keyboard);
 }
 
 char keyboard_pop()

@@ -5,31 +5,33 @@
 #include "../task/task.h"
 #include "../io/io.h"
 #include "../keyboard/keyboard.h"
-
+#include "../mouse/mouse.h"
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
+static INTERRUPT_CALLBACK_FUNCTION interrupt_callbacks[MYOS_TOTAL_INTERRUPTS];
+
 struct idtr idtr_descriptor;
 static ISR80_COMMAND isr80h_commands[MYOS_MAX_ISR80H_COMMANDS];
+extern void *interrupt_table[MYOS_TOTAL_INTERRUPTS];
 
 extern void idt_load(struct idtr *ptr);
-extern void int21h();
+//extern void int21h();
 //extern void int20h();
-extern void isr80h_wrapper();
+//extern void isr80h_wrapper();
 extern void no_interrupts();
+
+
+int idt_register_interrupt_callback(int interrupt, INTERRUPT_CALLBACK_FUNCTION interrupt_callback)
+{
+    if (interrupt < 0 || interrupt >= MYOS_TOTAL_INTERRUPTS)
+    {
+        return -1;
+    }
+    interrupt_callbacks[interrupt] = interrupt_callback;
+    return 1;   
+}
 
 void no_interrupts_handler()
 {
-    outsb(0x20, 0x20); // PIC에 EOI 신호 전송
-}
-
-void int21h_handler()
-{
-    keyboard_handle_interrupt();
-    outsb(0x20, 0x20); // PIC에 EOI 신호 전송
-}
-
-void int20h_handler()
-{
-    //print("T"); // 타이머 틱마다 T 출력
     outsb(0x20, 0x20); // PIC에 EOI 신호 전송
 }
 
@@ -59,13 +61,22 @@ void idt_init()
 
     for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
     {
-        idt_set(i, no_interrupts);
+        idt_set(i, interrupt_table[i]);
     }
 
-    idt_set(0, idt_zero);
-    //idt_set(0x20, int20h);      // 타이머 인터럽트 (IRQ 0)
-    idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
-    idt_set(0x80, isr80h_wrapper);      // 시스템 콜
+    for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
+    {
+        idt_register_interrupt_callback(i, no_interrupts_handler);
+    }
+    // idt_set(0, idt_zero);
+    // //idt_set(0x20, int20h);      // 타이머 인터럽트 (IRQ 0)
+    // idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
+    // idt_set(0x80, isr80h_wrapper);      // 시스템 콜
+    idt_register_interrupt_callback(0, idt_zero);
+    //idt_register_interrupt_callback(0x20, int20h_handler);
+    //idt_register_interrupt_callback(0x2C, mouse_handle_interrupt);
+    idt_register_interrupt_callback(0x21, keyboard_handle_interrupt);
+    idt_register_interrupt_callback(0x80, isr80h_handler);
     idt_load(&idtr_descriptor);
 }
 
@@ -105,14 +116,26 @@ void *isr80h_handle_command(int ask, struct interrupt_frame* frame)
 //2.register save.
 //3.system call comannd call
 //4.again recovery to user page.
-void* isr80h_handler(struct interrupt_frame* frame)
+void isr80h_handler(struct interrupt_frame* frame)
 {
     void* res = NULL;
     int ask = frame->eax; // System call command is in EAX
     change_to_kernel_page();
     save_registers(frame);
     res = isr80h_handle_command(ask, frame);
+    frame->eax = (uint32_t)res;
     paging_switch(get_cur_task()->page_directory);
-    return res;
 }
 
+void interrupt_handler(struct interrupt_frame* frame)
+{
+    int interrupt = frame->vector_number;
+    if (interrupt_callbacks[interrupt] != 0)
+    {
+        interrupt_callbacks[interrupt](frame);
+    }
+    if (interrupt >= 0x20 && interrupt < 0x30)
+    {
+        outsb(0x20, 0x20);
+    }
+}

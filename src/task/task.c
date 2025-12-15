@@ -26,6 +26,7 @@ int init_task(struct task *task, struct process *proc)
   task->regs.esp = MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_START;
   task->regs.flags = 0x202;
   task->process = proc;
+  task->state = TASK_RUNNING;
   return 0;
 }
 
@@ -75,11 +76,53 @@ struct task *get_cur_task()
 
 struct task *get_next_task()
 {
-  if (task_cur->next == NULL)
+  if(!task_head)
+    return 0;
+  struct task *t = task_cur->next;
+  if (!t)
+    t = task_head;
+  struct task *start_task = t;
+  while(1)
   {
-    return task_head;
+    if (t->state == TASK_RUNNING)
+      return t;
+    t = t->next;
+    if (!t)
+      t = task_head;
+    if (t == start_task)
+      break;
   }
-  return task_cur->next;
+  return task_cur;
+}
+
+void  task_block(void *event_wait_channel)
+{
+  task_cur->state = TASK_BLOCKED;
+  task_cur->event_wait_channel = event_wait_channel;
+  struct task* next_task = get_next_task();
+  if (next_task != task_cur)
+    task_switch(next_task);
+  else
+  {
+    enable_interrupts();
+    halt();
+  }
+}
+
+void task_wakeup(void *event_wait_channel)
+{
+  struct task *t = task_head;
+  if (!t)
+    return ;
+  while (t)
+  {
+    if (t->state == TASK_BLOCKED && t->event_wait_channel == event_wait_channel)
+    {
+      t->state = TASK_RUNNING;
+      t->event_wait_channel = NULL;
+    }
+    t = t->next;
+  }
 }
 
 void task_delete(struct task *task)
@@ -104,6 +147,7 @@ int task_switch(struct task *task)
 {
   task_cur = task;
   paging_switch(task->page_directory);
+  set_cur_process(task->process);
   return 0;
 }
 
