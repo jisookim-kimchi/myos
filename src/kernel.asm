@@ -23,6 +23,11 @@ _start:
     or al, 2
     out 0x92, al
 
+    ;enable A20 line what is A20 ?: required for accessing memory above 1MB
+    in al, 0x92
+    or al, 2
+    out 0x92, al
+
     ;Remap the Master PIC
     mov al, 00010001b   ; ICW1: Initialize PIC, expect ICW4 
     out 0x20, al        ; Send to Master PIC command port
@@ -42,22 +47,11 @@ _start:
     out 0x21, al        ; Send to Master PIC data port
     out 0xA1, al        ; Send to Slave PIC data port
     
-    mov al, 0           ; Enable all IRQs (0 = enabled)
+    mov al, 11111100b   ; Unmask IRQ0(Timer) and IRQ1(Keyboard)
     out 0x21, al        ; Master PIC mask
+    mov al, 11111111b   
     out 0xA1, al        ; Slave PIC mask
-    
-    ; Remap the master PIC
-    ; mov al, 00010001b
-    ; out 0x20, al ; Tell master PIC
 
-    ; mov al, 0x20 ; Interrupt 0x20 is where master ISR should start
-    ; out 0x21, al
-
-    ; mov al, 00000001b
-    ; out 0x21, al
-    ;End remap of the master PIC
-
-    sti ; enable interrupts
     call kernel_main
     jmp $
 

@@ -1,19 +1,20 @@
 #include "kernel.h"
 #include "idt/idt.h"
-#include "io/io.h"
-#include "memory/heap/kernel_heap.h"
-#include "memory/paging/paging.h"
-#include "keyboard/keyboard.h"
-#include "memory/memory.h"
+// #include "io/io.h"
 #include "disk/disk.h"
-#include "disk/streamer.h"
+#include "keyboard/keyboard.h"
+#include "memory/heap/kernel_heap.h"
+#include "memory/memory.h"
+#include "memory/paging/paging.h"
+// #include "disk/streamer.h"
 #include "config.h"
 #include "gdt/gdt.h"
 #include "task/tss.h"
-#include "filesystem/pathparser.h"
-#include "task/process.h"
-#include "string/string.h"
+// #include "filesystem/pathparser.h"
 #include "isr80h/isr80h.h"
+#include "string/string.h"
+#include "task/process.h"
+#include "timer/timer.h"
 
 uint16_t *video_memory = 0;
 uint16_t terminal_row = 0;
@@ -73,8 +74,7 @@ void    init_terminal()
     }
 }
 
-void print(const char *str)
-{
+void print(const char *str) {
     size_t len = ft_strlen(str);
     for (size_t i = 0; i < len; i++)
     {
@@ -150,10 +150,13 @@ void kernel_main()
     kernel_heap_init();
     idt_init();
     keyboard_init();
-   
-    
+    timer_init(100);
     ft_memset(&tss, 0x00, sizeof(tss));
-    tss.esp0 = 0x600000;
+    
+    // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
+    // 유저 모드에서 인터럽트가 발생하면, CPU는 자동으로 스택을 여기(0x600000)로 바꿉니다.
+    // 그리고 원래 유저가 쓰던 스택 위치(ESP)를 여기에 저장해둡니다.
+    tss.esp0 = 0x600000; 
     tss.ss0 = MYOS_KERNEL_DATA_SELECTOR;
 
     // Load the TSS
@@ -161,7 +164,27 @@ void kernel_main()
 
     file_system_init();
 
+
     disk_search_and_init();
+
+    // --- FAT16 Write Test ---
+    print("Testing FAT16 Write...\n");
+    int fd = fopen("0:/test2.txt", "w");
+    if (fd <= 0)
+    {
+        print("Failed to open file for writing\n");
+    }
+    else
+    {
+        char *data = "Hello world!\n";
+        int written = fwrite(data, 1, ft_strlen(data), fd);
+        print("Written bytes: ");
+        print_int(written);
+        print("\n");
+        fclose(fd);
+    }
+    // ------------------------
+
 
   
 
@@ -185,17 +208,22 @@ void kernel_main()
 
     enable_paging();
 
+    enable_interrupts();
+
     isr80h_register_command_call();
 
+    // print("test sleep\n");
+    // sleep(3);
+    // print("done sleep\n");
+
     struct process *process = 0;
-    int res = process_load("0:/blank.bin", &process);
+    int res = process_load("0:/shell.bin", &process);
     if (res < 0)
     {
         panic("process_load failed!\n");
     }
     
     task_run_first_ever_task();
-
     while (1)
     {
 

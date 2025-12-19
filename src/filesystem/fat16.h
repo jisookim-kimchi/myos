@@ -1,6 +1,7 @@
 #ifndef FAT16_H
 #define FAT16_H
 
+#include <stdint.h>
 #include "file.h"
 
 #define FAT16_SIGNATURE 0x29
@@ -97,7 +98,8 @@ struct fat_item
         struct fat_directory_item* dir_item;
         struct fat_directory* directory;
     };
-    
+    uint32_t item_entry_sector;
+    uint32_t item_entry_offset;
     FAT_ITEM_TYPE type;
 };
 
@@ -122,8 +124,6 @@ struct fat_private
     struct disk_streamer* directory_stream;
 };
 
-
-
 filesystem_t* fat16_init();
 void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode);
 int fat16_resolve(struct disk* disk);
@@ -133,6 +133,7 @@ void format_83_to_string(struct fat_directory_item* item, char *out, int max);
 struct fat_directory_item *fat16_clone_dir_item(struct fat_directory_item *src, size_t size);
 
 int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out);
+int fat16_write(struct disk *disk, void *private_data, uint32_t write_size, uint32_t nmemb, char *out);
 
 void fat16_free_dir(struct fat_directory* directory);
 void fat16_item_free(struct fat_item* item);

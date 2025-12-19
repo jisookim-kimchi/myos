@@ -54,6 +54,7 @@ typedef struct file_descriptor
 struct disk;
 typedef void*(*FS_OPEN_FUNCTION)(struct disk* disk, struct path_part* path, FILE_MODE mode);
 typedef int (*FS_READ_FUNCTION)(struct disk* disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out);
+typedef int (*FS_WRITE_FUNCTION)(struct disk* disk, void* private_data, uint32_t size, uint32_t nmemb, char *in);
 typedef int (*FS_RESOLVE_FUNCTION)(struct disk* disk); //check if the disk validates this filesystem
 typedef int (*FS_UNRESOLVE_FUNCTION)(struct disk* disk); //unresolve the filesystem
 typedef int (*FS_SEEK_FUNCTION)(void *private, int offset, FILE_SEEK_MODE mode);
@@ -66,6 +67,7 @@ typedef struct filesystem
     FS_RESOLVE_FUNCTION resolve;
     FS_OPEN_FUNCTION open;
     FS_READ_FUNCTION read;
+    FS_WRITE_FUNCTION write;
     FS_UNRESOLVE_FUNCTION unresolve;
     FS_SEEK_FUNCTION seek;
     FS_STAT_FUNCTION stat;
@@ -76,6 +78,7 @@ typedef struct filesystem
 void file_system_init();
 int fopen(const char* filename, const char* mode);
 int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb);
+int fwrite(void *ptr, uint32_t size, uint32_t nmemb, int fd);
 void file_system_insert(struct filesystem* fs);
 struct filesystem* file_system_resolve(struct disk* disk);
 FILE_MODE get_filemode(const char *str);

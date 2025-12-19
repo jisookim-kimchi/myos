@@ -44,3 +44,12 @@ void *sys_call2_getkey(struct interrupt_frame *frame)
   }
   return (void *)c;
 }
+
+void *sys_call3_sleep(struct interrupt_frame *frame)
+{
+  uint32_t ticks = (uint32_t)task_get_stack_item(get_cur_task(), 0);
+
+  task_sleep_until(ticks);
+  
+  return 0;
+}

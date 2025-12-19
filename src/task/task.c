@@ -6,6 +6,7 @@
 #include "../memory/paging/paging.h"
 #include "../string/string.h"
 #include "process.h"
+#include "../timer/timer.h"
 
 struct task *task_cur = NULL;
 struct task *task_head = NULL;
@@ -106,22 +107,6 @@ void  task_block(void *event_wait_channel)
   {
     enable_interrupts();
     halt();
-  }
-}
-
-void task_wakeup(void *event_wait_channel)
-{
-  struct task *t = task_head;
-  if (!t)
-    return ;
-  while (t)
-  {
-    if (t->state == TASK_BLOCKED && t->event_wait_channel == event_wait_channel)
-    {
-      t->state = TASK_RUNNING;
-      t->event_wait_channel = NULL;
-    }
-    t = t->next;
   }
 }
 
@@ -285,4 +270,57 @@ out_free:
   kernel_free(tmp);
 out:
   return res;
+}
+
+void task_wakeup(void *event_wait_channel)
+{
+  struct task *t = task_head;
+  if (!t)
+    return ;
+  while (t)
+  {
+    if (t->state == TASK_BLOCKED && t->event_wait_channel == event_wait_channel)
+    {
+      t->state = TASK_RUNNING;
+      t->event_wait_channel = NULL;
+    }
+    t = t->next;
+  }
+}
+
+void  task_sleep_until(int wait_ticks)
+{
+  task_cur->sleep_expiry = get_tick() + wait_ticks;
+  task_cur->state = TASK_BLOCKED;
+  struct task* next = get_next_task();
+  // 나 자신이면? (세상에 나뿐) -> 쉴 틈 없이 바로 리턴됨
+  if (next == task_cur)
+  {
+    // 타이머가 깨워줄 때까지 여기서 무한 대기 (Busy Wait 아님, Halt Wait)
+    while (task_cur->state == TASK_BLOCKED)
+    {
+      enable_interrupts();
+      halt();
+    }
+  }
+  else
+  {
+    task_switch(next);
+  }
+}
+
+void task_run_scheduled_tasks(uint32_t cur_tick)
+{
+  struct task *task = task_head;
+  if (!task)
+    return ;
+  while(task)
+  {
+    if (task->state == TASK_BLOCKED && task->sleep_expiry > 0 && cur_tick >= task->sleep_expiry)
+    {
+      task->state = TASK_RUNNING;
+      task->sleep_expiry = 0;
+    }
+    task = task->next;
+  }
 }

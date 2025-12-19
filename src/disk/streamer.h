@@ -1,11 +1,9 @@
 #ifndef STREAMER_H
 #define STREAMER_H
 
-#include "disk.h"
 #include <stdint.h>
-#include "memory/heap/kernel_heap.h"
-#include "status.h"
-#include "../config.h"
+#include "disk.h"
+
 
 typedef struct disk_streamer
 {
@@ -16,5 +14,6 @@ typedef struct disk_streamer
 struct disk_streamer* create_disk_streamer(int disk_id);
 int     disk_stream_seek(struct disk_streamer* streamer, uint32_t position);
 int     disk_stream_read(struct disk_streamer* streamer,void*out, int total);
+int     disk_stream_write(struct disk_streamer* streamer, void* in, int total);
 void    destroy_disk_streamer(struct  disk_streamer* streamer);
 #endif

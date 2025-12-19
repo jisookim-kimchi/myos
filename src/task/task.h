@@ -45,6 +45,7 @@ struct task
     struct process *process;
     int state;
     void *event_wait_channel;
+    uint32_t sleep_expiry;
 };
 
 int init_task(struct task* task, struct process* process);
@@ -69,4 +70,6 @@ void* task_get_stack_item(struct task* task, int index);
 
 void task_block(void *event_wait_channel);
 void task_wakeup(void *event_wait_channel);
+void task_sleep_until(int wait_ticks);
+void task_run_scheduled_tasks(uint32_t cur_tick);
 #endif

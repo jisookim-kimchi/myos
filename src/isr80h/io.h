@@ -4,4 +4,5 @@
 struct interrupt_frame;
 void *sys_call1_print(struct interrupt_frame *frame);
 void *sys_call2_getkey(struct interrupt_frame *frame);
+void *sys_call3_sleep(struct interrupt_frame *frame);
 #endif
