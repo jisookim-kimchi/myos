@@ -6,7 +6,6 @@
 #include "../io/io.h"
 #include "../keyboard/keyboard.h"
 #include "../mouse/mouse.h"
-#include "../timer/timer.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 static INTERRUPT_CALLBACK_FUNCTION interrupt_callbacks[MYOS_TOTAL_INTERRUPTS];
@@ -131,15 +130,24 @@ void isr80h_handler(struct interrupt_frame* frame)
     paging_switch(get_cur_task()->page_directory);
 }
 
+//save the cur task;s state
+//if we have a cur task, return its stack pointer
+//otherwise return the original frame
 void interrupt_handler(struct interrupt_frame* frame)
 {
     int interrupt = frame->vector_number;
+
     if (interrupt_callbacks[interrupt] != 0)
     {
         interrupt_callbacks[interrupt](frame);
     }
-    if (interrupt >= 0x20 && interrupt < 0x30)
+    
+    if (interrupt >= 0x20 && interrupt < 0x30) //hardware intterupt..
     {
         outsb(0x20, 0x20);
+        if (interrupt >= 0x28) //if it is slave pic
+        {
+            outsb(0xA0, 0x20);
+        }
     }
 }

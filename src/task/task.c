@@ -5,8 +5,8 @@
 #include "../memory/memory.h"
 #include "../memory/paging/paging.h"
 #include "../string/string.h"
-#include "process.h"
 #include "../timer/timer.h"
+#include "process.h"
 
 struct task *task_cur = NULL;
 struct task *task_head = NULL;
@@ -17,8 +17,10 @@ int init_task(struct task *task, struct process *proc)
   ft_memset(task, 0, sizeof(struct task));
 
   // Fix: Add PAGING_WRITEABLE so kernel can write to stack after switching CR3
-  task->page_directory = paging_new_4gb(PAGING_PRESENT | PAGING_USER_ACCESS);
-  if (!task->page_directory) {
+  task->page_directory =
+      paging_new_4gb(PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
+  if (!task->page_directory)
+  {
     return -MYOS_ERROR_NO_MEMORY;
   }
   task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
@@ -66,27 +68,32 @@ struct task *new_task(struct process *proc)
     return NULL;
   }
   task_add_tail(task);
-  if (task_cur == NULL) {
+  if (task_cur == NULL)
+  {
     task_cur = task;
   }
   return task;
 }
 
 struct task *get_cur_task()
-    { return task_cur; }
+{
+  return task_cur;
+}
 
 struct task *get_next_task()
 {
-  if(!task_head)
+  if (!task_head)
     return 0;
   struct task *t = task_cur->next;
   if (!t)
     t = task_head;
   struct task *start_task = t;
-  while(1)
+  while (1)
   {
     if (t->state == TASK_RUNNING)
+    {
       return t;
+    }
     t = t->next;
     if (!t)
       t = task_head;
@@ -96,13 +103,15 @@ struct task *get_next_task()
   return task_cur;
 }
 
-void  task_block(void *event_wait_channel)
+void task_block(void *event_wait_channel)
 {
   task_cur->state = TASK_BLOCKED;
   task_cur->event_wait_channel = event_wait_channel;
-  struct task* next_task = get_next_task();
+  struct task *next_task = get_next_task();
   if (next_task != task_cur)
+  {
     task_switch(next_task);
+  }
   else
   {
     enable_interrupts();
@@ -136,7 +145,7 @@ int task_switch(struct task *task)
   return 0;
 }
 
-// change to user page and switch to argument task's directory not change
+// change to user page and switch to argument task's directory
 // task_cur use when we want to check another task's memory space now task means
 // another process
 int task_page_task(struct task *task)
@@ -276,10 +285,11 @@ void task_wakeup(void *event_wait_channel)
 {
   struct task *t = task_head;
   if (!t)
-    return ;
+    return;
   while (t)
   {
-    if (t->state == TASK_BLOCKED && t->event_wait_channel == event_wait_channel)
+    if (t->state == TASK_BLOCKED &&
+        t->event_wait_channel == event_wait_channel)
     {
       t->state = TASK_RUNNING;
       t->event_wait_channel = NULL;
@@ -288,11 +298,11 @@ void task_wakeup(void *event_wait_channel)
   }
 }
 
-void  task_sleep_until(int wait_ticks)
+void task_sleep_until(int wait_ticks)
 {
   task_cur->sleep_expiry = get_tick() + wait_ticks;
   task_cur->state = TASK_BLOCKED;
-  struct task* next = get_next_task();
+  struct task *next = get_next_task();
   // 나 자신이면? (세상에 나뿐) -> 쉴 틈 없이 바로 리턴됨
   if (next == task_cur)
   {
@@ -313,10 +323,11 @@ void task_run_scheduled_tasks(uint32_t cur_tick)
 {
   struct task *task = task_head;
   if (!task)
-    return ;
-  while(task)
+    return;
+  while (task)
   {
-    if (task->state == TASK_BLOCKED && task->sleep_expiry > 0 && cur_tick >= task->sleep_expiry)
+    if (task->state == TASK_BLOCKED && task->sleep_expiry > 0 &&
+        cur_tick >= task->sleep_expiry)
     {
       task->state = TASK_RUNNING;
       task->sleep_expiry = 0;

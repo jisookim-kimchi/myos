@@ -12,29 +12,44 @@ static uint32_t tick = 0;
 void timer_init(int freq)
 {
 
-    int divisor = 1193180 / freq;
-   
-    outsb(0x43, 0x36);
+  int divisor = 1193180 / freq;
 
-    // Divisor 보내기 (Lo -> Hi 순서)
-    uint8_t l = (uint8_t)(divisor & 0xFF);
-    uint8_t h = (uint8_t)((divisor >> 8) & 0xFF);
+  outsb(0x43, 0x36);
 
-    outsb(0x40, l);
-    outsb(0x40, h);
-    idt_register_interrupt_callback(0x20, timer_tiktok);
+  // Divisor 보내기 (Lo -> Hi 순서)
+  uint8_t l = (uint8_t)(divisor & 0xFF);
+  uint8_t h = (uint8_t)((divisor >> 8) & 0xFF);
+
+  outsb(0x40, l);
+  outsb(0x40, h);
+  idt_register_interrupt_callback(0x20, timer_tiktok);
 }
 
 void timer_tiktok(struct interrupt_frame *frame)
 {
-    tick++;
-    // 나중에 여기에 "프로세스 스위칭" 코드가 들어갈 예정입니다.
-    // 지금은 1초마다 점을 찍어서 살아있는지 확인해봅시다. (freq가 100일 때)
-    task_run_scheduled_tasks(tick);
-    if (tick % 100 == 0)
-    {
-        //print(".");
-    }
+  tick++;
+
+  task_run_scheduled_tasks(tick);
+
+  // Round Robin Scheduler
+  // Only switch if we have a current task (multitasking initialized)
+  // and don't switch on every single tick if you want timeslices (e.g. tick %
+  // 10 == 0) For now, switch on every tick for responsiveness testing. Disabled
+  // for regression testing
+  /*
+  if (get_cur_task())
+  {
+      struct task* next_task = get_next_task();
+      if (next_task && next_task != get_cur_task())
+      {
+          task_switch(next_task);
+      }
+  }
+  */
+
+  if (tick % 100 == 0) {
+    // print(".");
+  }
 }
 
 uint32_t get_tick()

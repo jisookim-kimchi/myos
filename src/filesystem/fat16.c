@@ -191,10 +191,6 @@ out:
 //we consider just only for READONLY in moment
 void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
 {
-    // if (mode != FILE_MODE_READ)
-    // {
-    //     return NULL;
-    // }
     struct fat_file_descriptor *desc = kernel_zero_alloc(sizeof(struct fat_file_descriptor));
     if (!desc)
     {
@@ -203,8 +199,21 @@ void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
     desc->item = fat16_get_dir_entry(disk, path);
     if (desc->item == NULL)
     {
+        if (mode == FILE_MODE_WRITE)
+        {
+            int res = fat16_create_file(disk, path);
+            if (res < 0)
+            {
+                 kernel_free(desc);
+                 return ERROR(res);
+            }
+            desc->item = fat16_get_dir_entry(disk, path);
+        }
+    }
+    if (desc->item == NULL)
+    {
         kernel_free(desc);
-        print("Error finiding....\n");
+        print("Error finding file (and failed to create if write mode)\n");
         return ERROR(-MYOS_FILE_NOT_FOUND);
     }
     desc->pos = 0;
@@ -786,6 +795,59 @@ static int fat16_set_next_cluster(struct disk *disk, int cluster, int next_clust
     return 0;
 }
 
+static void fat16_to_dos_filename(const char* fname, uint8_t* out_name, uint8_t* out_ext)
+{
+    ft_memset(out_name, ' ', 8);
+    ft_memset(out_ext, ' ', 3);
+    const char* p = fname;
+    int i = 0;
+    for (i = 0; i < 8 && *p && *p != '.'; i++, p++)
+    {
+        char c = *p;
+        if (c >= 'a' && c <= 'z') c -= 32;
+        out_name[i] = (uint8_t)c;
+    }
+    if (*p == '.')
+    {
+        p++;
+        for (i = 0; i < 3 && *p; i++, p++)
+        {
+            char c = *p;
+            if (c >= 'a' && c <= 'z') c -= 32;
+            out_ext[i] = (uint8_t)c;
+        }
+    }
+}
+
+int fat16_create_file(struct disk* disk, struct path_part* path)
+{
+    struct fat_private *f_private = disk->fs_private_data;
+    struct disk_streamer* streamer = f_private->directory_stream;
+    struct fat_directory *root = &f_private->root_directory;
+    int max_entries = f_private->header.primary_header.root_dir_entries;
+    for (int i = 0; i < max_entries; i++)
+    {
+        if (root->item[i].filename[0] == 0x00 || root->item[i].filename[0] == 0xE5)
+        {
+            ft_memset(&root->item[i], 0, sizeof(struct fat_directory_item));
+            fat16_to_dos_filename(path->part, root->item[i].filename, root->item[i].ext);
+            root->item[i].attribute = 0x00;
+            
+            // Write to disk
+            int root_dir_sector = f_private->header.primary_header.reserved_sectors + (f_private->header.primary_header.fat_copies * f_private->header.primary_header.sectors_per_fat);
+            int entry_pos = (root_dir_sector * disk->sector_size) + (i * sizeof(struct fat_directory_item));
+            
+            disk_stream_seek(streamer, entry_pos);
+            if(disk_stream_write(streamer, &root->item[i], sizeof(struct fat_directory_item)) < 0)
+            {
+                return -MYOS_IO_ERROR;
+            }
+            return 0;
+        }
+    }
+    return -MYOS_IO_ERROR;
+}
+
 int fat16_write_internal(struct disk* disk, int cluster, uint32_t offset, uint32_t total_bytes, void* data)
 {
     struct fat_private *f_private = disk->fs_private_data;
@@ -796,11 +858,8 @@ int fat16_write_internal(struct disk* disk, int cluster, uint32_t offset, uint32
     if (offset >= cluster_size)
     {
         int cluster_offset = offset / cluster_size;
-        // FAT 테이블을 조회하여 다음 클러스터 번호를 찾고 업데이트
         cur_cluster = fat16_get_cluster_chain_link(disk, cluster, cluster_offset); 
-        // 오프셋을 현재 클러스터 내의 위치로 재설정
         offset = offset % cluster_size;
-        // 만약 클러스터 체인 끝(EOF)에 도달했다면 에러 또는 종료 처리
         if (cur_cluster == FAT_EOF_MARKER)
         {
             return -MYOS_EOF;
@@ -815,6 +874,7 @@ int fat16_write_internal(struct disk* disk, int cluster, uint32_t offset, uint32
         int offset_int_cluster = offset % cluster_size;
 
         uint32_t cluster_absolute_pos = starting_sector * disk->sector_size + offset_int_cluster;
+        
         disk_stream_seek(streamer, cluster_absolute_pos);
        
         //calculate how many bytes to write
@@ -890,9 +950,29 @@ int fat16_write(struct disk *disk, void *private, uint32_t size, uint32_t nmemb,
     // 1. 첫 클러스터 번호 가져오기
     int cluster = item->low_16_bits_first_cluster | (item->high_16_bits_first_cluster << 16);
     
-    // 2. 내부 쓰기 함수 호출
+    //첫 클러스터가 0이면 새로 할당 (새 파일인 경우)
+    if (cluster == 0)
+    {
+        int free_cluster = fat16_find_free_cluster(disk);
+        if (free_cluster < 0)
+        {
+            return -MYOS_IO_ERROR;
+        }
+        
+        // 1-1. FAT 테이블에 할당 표시 (EOF)
+        fat16_set_next_cluster(disk, free_cluster, FAT_EOF_MARKER);
+        
+        // 1-2. 디렉토리 엔트리에 첫 클러스터 정보 업데이트
+        item->low_16_bits_first_cluster = (uint16_t)(free_cluster & 0xFFFF);
+        item->high_16_bits_first_cluster = (uint16_t)((free_cluster >> 16) & 0xFFFF);
+        
+        // 1-3. 디렉토리 엔트리를 디스크에 저장 (중요!)
+        // 여기서 업데이트 안 하면 나중에 파일 목록 다시 읽을 때 클러스터 정보가 날아감
+        fat16_update_directory_entry(disk, descriptor, item->filesize);
+        
+        cluster = free_cluster;
+    }
     int res = fat16_write_internal(disk, cluster, offset, total, in);
-    // 3. 파일 크기가 커졌다면 메모리 상의 정보 업데이트
     if (res >= 0)
     {
         if (offset + res > item->filesize)
