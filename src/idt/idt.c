@@ -6,6 +6,7 @@
 #include "../io/io.h"
 #include "../keyboard/keyboard.h"
 #include "../mouse/mouse.h"
+#include "../timer/timer.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 static INTERRUPT_CALLBACK_FUNCTION interrupt_callbacks[MYOS_TOTAL_INTERRUPTS];
@@ -74,7 +75,7 @@ void idt_init()
   // idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
   // idt_set(0x80, isr80h_wrapper);      // 시스템 콜
   idt_register_interrupt_callback(0, idt_zero);
-    //idt_register_interrupt_callback(0x20, timer_handle_interrupt);
+    idt_register_interrupt_callback(0x20, timer_handle_interrupt);
     //idt_register_interrupt_callback(0x2C, mouse_handle_interrupt);
   idt_register_interrupt_callback(0x21, keyboard_handle_interrupt);
   idt_register_interrupt_callback(0x80, isr80h_handler);

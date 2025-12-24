@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 void timer_init(int freq);
-void timer_tiktok(struct interrupt_frame *frame);
+void timer_handle_interrupt(struct interrupt_frame *frame);
 uint32_t get_tick();
 void sleep(uint32_t tick);
 #endif

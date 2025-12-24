@@ -22,10 +22,10 @@ void timer_init(int freq)
 
   outsb(0x40, l);
   outsb(0x40, h);
-  idt_register_interrupt_callback(0x20, timer_tiktok);
+  idt_register_interrupt_callback(0x20, timer_handle_interrupt);
 }
 
-void timer_tiktok(struct interrupt_frame *frame)
+void timer_handle_interrupt(struct interrupt_frame *frame)
 {
   tick++;
 
@@ -33,19 +33,18 @@ void timer_tiktok(struct interrupt_frame *frame)
 
   // Round Robin Scheduler
   // Only switch if we have a current task (multitasking initialized)
-  // and don't switch on every single tick if you want timeslices (e.g. tick %
-  // 10 == 0) For now, switch on every tick for responsiveness testing. Disabled
-  // for regression testing
-  /*
+  // and don't switch on every single tick if you want timeslices (tick %10 == 0) For now, switch on every tick for responsiveness testing.
   if (get_cur_task())
   {
       struct task* next_task = get_next_task();
       if (next_task && next_task != get_cur_task())
       {
-          task_switch(next_task);
+        save_registers(frame);
+        task_switch(next_task);
+        task_return(&next_task->regs);
       }
   }
-  */
+  
 
   if (tick % 100 == 0) {
     // print(".");
