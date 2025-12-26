@@ -1,13 +1,17 @@
 #include "kernel_heap.h"
 #include "heap.h"
-#include "config.h"
-#include "../../idt/idt.h"
+#include "../../lock/lock.h"
+#include "../../config.h"
+
 #include "../../kernel.h"
-#include "../memory.h"
+#include "../../memory/memory.h"
 #include <stdint.h>
 
 struct heap kernel_heap;
 struct heap_table kernel_heap_table;
+
+//heap lock
+spinlock_t kernel_heap_lock = 0;
 
 void kernel_heap_init()
 {
@@ -19,7 +23,6 @@ void kernel_heap_init()
     int res = heap_init(&kernel_heap, (void*)HEAP_ADDRESS, heap_end, &kernel_heap_table);
     if (res < 0)
     {
-        // 힙 생성 실패 처리
         print("Kernel heap creation failed!\n");
         return ;
     }
@@ -28,12 +31,17 @@ void kernel_heap_init()
 
 void kernel_free(void *ptr)
 {
+    spin_lock(&kernel_heap_lock);
     my_free(&kernel_heap, ptr);
+    spin_unlock(&kernel_heap_lock);
 }
 
 void *kernel_malloc(size_t size)
 {
-    return my_malloc(&kernel_heap, size);
+    spin_lock(&kernel_heap_lock);
+    void *ptr = my_malloc(&kernel_heap, size);
+    spin_unlock(&kernel_heap_lock);
+    return ptr;
 }
 
 void *kernel_zero_alloc(size_t size)

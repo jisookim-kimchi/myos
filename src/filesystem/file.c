@@ -5,11 +5,15 @@
 #include "../memory/memory.h"
 #include "../status.h"
 #include "../string/string.h"
-#include "disk/disk.h"
+#include "../disk/disk.h"
+#include "../lock/lock.h"
 #include "fat16.h"
+
 
 struct filesystem *filesystems[MYOS_MAX_FILESYSTEMS];
 struct file_descriptor *file_descriptors[MYOS_MAX_FILE_DESCRIPTORS];
+
+spinlock_t filesystem_lock = 0;
 
 static struct filesystem **get_free_filesystem()
 {
@@ -133,12 +137,7 @@ FILE_MODE get_filemode(const char *str)
 int fopen(const char *filename, const char *mode)
 {
   int res = 0;
-
-  print("Kernel: fopen(filename=\"");
-  print(filename);
-  print("\", mode=\"");
-  print(mode);
-  print("\") called\n");
+  spin_lock(&filesystem_lock);
 
   struct path_root *root_path = parse_path(filename, NULL);
   if (!root_path)
@@ -192,6 +191,7 @@ int fopen(const char *filename, const char *mode)
   res = desc->index;
 
 out:
+  spin_unlock(&filesystem_lock);
   return res;
 }
 
@@ -204,9 +204,11 @@ int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb)
     return -MYOS_INVALID_ARG;
   }
 
+  spin_lock(&filesystem_lock);
   struct file_descriptor *desc = get_file_descriptor(fd);
   if (!desc)
   {
+    spin_unlock(&filesystem_lock);
     return -MYOS_INVALID_ARG;
   }
 
@@ -214,8 +216,10 @@ int fread(int fd, void *buffer, unsigned int size, unsigned int nmemb)
   if (bytes > 0)
   {
     desc->pos += bytes;
+    spin_unlock(&filesystem_lock);
     return bytes / size;
   }
+  spin_unlock(&filesystem_lock);
   return bytes;
 }
 
@@ -227,25 +231,30 @@ int fwrite(void *ptr, uint32_t size, uint32_t nmemb, int fd)
     return -MYOS_INVALID_ARG;
   }
 
+  spin_lock(&filesystem_lock);
   struct file_descriptor *desc = get_file_descriptor(fd);
   if (!desc)
   {
+    spin_unlock(&filesystem_lock);
     return -MYOS_INVALID_ARG;
   }
 
   res = desc->filesystem->write(desc->disk, desc->private, size, nmemb, (char *)ptr);
   if (res < 0)
   {
+    spin_unlock(&filesystem_lock);
     return res;
   }
 
   desc->pos += res;
+  spin_unlock(&filesystem_lock);
   return res / size;
 }
 
 int fseek(int fd, int offset, FILE_SEEK_MODE mode)
 {
   int res = 0;
+  spin_lock(&filesystem_lock);
   struct file_descriptor *desc = get_file_descriptor(fd);
   if (!desc)
   {
@@ -260,12 +269,14 @@ int fseek(int fd, int offset, FILE_SEEK_MODE mode)
     res = 0;
   }
 out:
+  spin_unlock(&filesystem_lock);
   return res;
 }
 
 int fstat(int fd, struct file_stat *stat)
 {
   int res = 0;
+  spin_lock(&filesystem_lock);
   struct file_descriptor *desc = get_file_descriptor(fd);
   if (!desc)
   {
@@ -281,6 +292,7 @@ int fstat(int fd, struct file_stat *stat)
     goto out;
   }
 out:
+  spin_unlock(&filesystem_lock);
   return res;
 }
 
