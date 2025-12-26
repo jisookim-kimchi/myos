@@ -4,45 +4,30 @@ int main()
 {
   print("Shell: Starting...\n");
 
-  // Heap Test 1: Get initial break
-  void* initial_break = sbrk(0);
-  print("Initial break: ");
-  print_hex((uint32_t)initial_break);
+
+  // Malloc/Free Test
+  print("Malloc Test 1\n");
+  void* p1 = malloc(512);
+  print("p1 allocated at: ");
+  print_hex((uint32_t)p1);
   print("\n");
 
-  // Raw sbrk test
-  print("SBRK Test: Requesting 4096 bytes...\n");
-  void* old_break = sbrk(0);
-  print("Current break: ");
-  print_hex((uint32_t)old_break);
+  print("Freeing p1\n");
+  free(p1);
+
+  print("Malloc Test 2:\n");
+  void* p2 = malloc(256);
+  print("p2 allocated at: ");
+  print_hex((uint32_t)p2);
   print("\n");
 
-  void* new_ptr = sbrk(5111);
-  if (new_ptr == (void*)-1)
+  if (p1 == p2)
   {
-      print("sbrk(5111) failed!\n");
+      print("SUCCESS: Memory Reused!\n");
   }
   else
   {
-      print("New memory allocated at: ");
-      print_hex((uint32_t)new_ptr);
-      print("\n");
-
-      // Verify we can write to it
-      char* access = (char*)new_ptr;
-      access[0] = 'T';
-      access[1] = 'E';
-      access[2] = 'S';
-      access[3] = 'T';
-      access[4] = '\0';
-      print("\n");
-      print(access);
-      print("\n");
-
-      void* final_break = sbrk(0);
-      print("Final break: ");
-      print_hex((uint32_t)final_break);
-      print("\n");
+      print("NOTE: Memory not reused.\n");
   }
 
   int fd = fopen("0:/test.txt", "r");

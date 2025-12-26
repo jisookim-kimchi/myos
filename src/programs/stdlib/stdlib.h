@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "malloc.h"
 
 void print(const char *str);
 void putchar(char c);
@@ -16,6 +17,5 @@ char *ft_strcpy(char *dest, const char *src);
 int getkey();
 int fopen(const char *filename, const char *mode);
 int fread(int fd, void *ptr, uint32_t size, uint32_t nmemb);
-void *sbrk(int amounts);
 
 #endif
