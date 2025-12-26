@@ -3,6 +3,16 @@
 int main()
 {
   print("Shell: Starting...\n");
+  
+//   print("Code Address: ");
+//   print_hex((uint32_t)main);
+//   print("\n");
+  
+//   int stack_var = 0;
+//   print("Stack Address: ");
+//   print_hex((uint32_t)&stack_var);
+//   print("\n");
+
   int fd = fopen("0:/test.txt", "r");
   sleep(1);
   if (fd >= 0)

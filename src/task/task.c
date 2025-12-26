@@ -177,6 +177,12 @@ void *task_get_stack_item(struct task *task, int index)
   // Calculate virtual address of item on user stack
   uint32_t virtual_addr = task->regs.esp + (index * sizeof(uint32_t));
 
+  // Security Check: Ensure the stack item is within the user zone (>= 256MB)
+  if (virtual_addr < MYOS_MEMORY_BOUNDARY)
+  {
+      return NULL;
+  }
+
   // Paging_get requires ALIGNED address, otherwise it returns error/index 0
   uint32_t aligned_virtual_addr = virtual_addr & 0xFFFFF000;
   uint32_t offset = virtual_addr & 0xFFF;
@@ -247,6 +253,12 @@ int copy_string_from_task(struct task *task, void *virtual, void *phys, int max)
   if (max <= 0 || !virtual || !phys)
     return -MYOS_INVALID_ARG;
 
+  // Security Check: Ensure the virtual address is within the user zone (>= 256MB)
+  if ((uint32_t)virtual < MYOS_MEMORY_BOUNDARY)
+  {
+      return -MYOS_INVALID_ARG;
+  }
+
   paging_switch(task->page_directory);
   ft_strncpy(phys, virtual, max);
   ((char*)phys)[max-1] = '\0';
@@ -259,6 +271,12 @@ int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size)
 {
   if (size <= 0 || !kernel_buf || !user_buf)
     return -MYOS_INVALID_ARG;
+
+  // Security Check: Ensure the virtual address and the end of the buffer are within the user zone (>= 256MB)
+  if ((uint32_t)user_buf < MYOS_MEMORY_BOUNDARY || ((uint32_t)user_buf + size) < MYOS_MEMORY_BOUNDARY)
+  {
+      return -MYOS_INVALID_ARG;
+  }
 
   paging_switch(task->page_directory);
   ft_memcpy(user_buf, kernel_buf, size);

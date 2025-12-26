@@ -1,6 +1,8 @@
 #include "paging.h"
 #include "../heap/kernel_heap.h"
 #include "../../kernel.h"
+#include "../../config.h"
+
 static uint32_t* cur_dir = 0;
 
 void paging_load_dir(uint32_t *dir);
@@ -23,10 +25,23 @@ struct paging_4gb_chunk* paging_new_4gb(uint8_t flags)
         }
         for(uint32_t j = 0; j < PAGING_TOTAL_ENTRIES_PER_TABLE; j++)
         {
-            table_entry[j] = (offset + (j * PAGING_PAGE_SIZE_BYTES)) | flags;
+            uint32_t current_offset = offset + (j * PAGING_PAGE_SIZE_BYTES);
+            uint32_t final_flags = flags;
+            if (current_offset < MYOS_MEMORY_BOUNDARY)
+            {
+                // Force bit 2 (User/Supervisor) to 0 for kernel zone
+                final_flags &= ~PAGING_USER_ACCESS;
+            }
+            table_entry[j] = current_offset | final_flags;
         }
         offset += PAGING_TOTAL_ENTRIES_PER_TABLE * PAGING_PAGE_SIZE_BYTES;
-        dir[i] = (uint32_t)table_entry | flags | PAGING_WRITEABLE;
+        
+        uint32_t directory_flags = flags | PAGING_WRITEABLE;
+        if (i * (PAGING_TOTAL_ENTRIES_PER_TABLE * PAGING_PAGE_SIZE_BYTES) < MYOS_MEMORY_BOUNDARY)
+        {
+            directory_flags &= ~PAGING_USER_ACCESS;
+        }
+        dir[i] = (uint32_t)table_entry | directory_flags;
     }
     paging_4gb_chunk_t* chunk_4gb = kernel_zero_alloc(sizeof(paging_4gb_chunk_t));
     if (chunk_4gb == NULL)

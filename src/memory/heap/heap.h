@@ -1,7 +1,7 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include "config.h"
+#include "../../config.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

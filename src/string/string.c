@@ -155,3 +155,35 @@ char ft_tolower(char s1)
     return s1;
 }
 
+
+void ft_itoa(int n, char s[])
+{
+    int i, sign;
+    if ((sign = n) < 0)
+        n = -n;
+    i = 0;
+    
+    if (n == 0)
+    {
+        s[i++] = '0';
+    }
+    while (n > 0)
+    {
+        s[i++] = n % 10 + '0';
+        n /= 10;
+    }
+
+    if (sign < 0)
+        s[i++] = '-';
+    s[i] = '\0';
+
+    // reverse
+    int j, k;
+    char temp_c;
+    for (j = 0, k = i - 1; j < k; j++, k--)
+    {
+        temp_c = s[j];
+        s[j] = s[k];
+        s[k] = temp_c;
+    }
+}

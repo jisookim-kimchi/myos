@@ -2,7 +2,7 @@ ENTRY(_start)
 OUTPUT_FORMAT("binary")
 SECTIONS
 {
-    . = 0x400000;
+    . = 0x10000000;
     .text : ALIGN(4096) /* c언어로 짠 코드들이 컴파일되어 기계어로 변한것, */
     {
         *(.text) 
