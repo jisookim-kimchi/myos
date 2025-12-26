@@ -161,6 +161,14 @@ int process_map_binary(struct process *proc)
     proc->id   = pid;
     proc->task = t;
     proc->stack = stack_ptr;
+
+    //셋팅 256MB이후부터 프로그램이 로드됩니다.
+    //그리고 프로그램이 로드된 위치를 bin_end_addr에 저장합니다.
+    //그리고 4096바이트 단위로 페이지를 매핑해서 cur_end_heap에저장.
+    //ex bin_end_addr 가 256라면? 256+4096 라면?
+    //cur_end_heap은 4096올림해서 8192가됨.
+    proc->bin_end_addr = (void*)(MYOS_PROGRAM_VIRTUAL_ADDRESS + proc->size);
+    proc->cur_end_heap = paging_align_address(proc->bin_end_addr);
     
     int rc = process_map_memory(proc);
     if (rc < 0) 
@@ -173,6 +181,48 @@ int process_map_binary(struct process *proc)
     processes[pid] = proc;
     *process = proc;
     return 0;
+}
+
+void *process_sbrk(struct process *proc, int amounts) 
+{
+    if (amounts == 0) 
+    {
+        return proc->cur_end_heap;
+    }
+
+    void *old_break = proc->cur_end_heap;
+    uint32_t new_break = (uint32_t)old_break + amounts;
+
+    // 0MB ~ 256 MB : kernel
+    // 256MB ~ 448 MB : user space //data code heap
+    // 448MB is kind of an arbitrary boundary between user space and user stack
+    // 448MB ~ 512MB: user stack
+    if (new_break > 0x1C000000) 
+    {
+        return (void *)-1;
+    }
+
+    if (amounts > 0) 
+    {
+        // Check if we need to map new pages
+        uint32_t diff = (uint32_t)paging_align_address((void *)new_break) - (uint32_t)paging_align_address(old_break);
+        if (diff > 0) 
+        {
+            // Allocate and map new pages
+            for (uint32_t addr = (uint32_t)paging_align_address(old_break); addr < (uint32_t)paging_align_address((void *)new_break); addr += PAGING_PAGE_SIZE_BYTES) 
+            {
+                void *phys = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
+                if (!phys) 
+                {
+                    // In a real OS, we'd roll back here. For now, just return error.
+                    return (void *)-1;
+                }
+                paging_map_to(proc->task->page_directory, (void *)addr, phys, (void *)(addr + PAGING_PAGE_SIZE_BYTES), PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
+            }
+        }
+    }
+    proc->cur_end_heap = (void *)new_break;
+    return old_break;
 }
 
 int process_load(const char *filename, struct process **process)

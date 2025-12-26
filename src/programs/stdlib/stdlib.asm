@@ -6,20 +6,15 @@ global print
 global getkey
 global sleep
 global fopen
-global sum
 global fread
+global sbrk
 
-%define SYSCALL_SUM 0
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
 %define SYSCALL_SLEEP 3
 %define SYSCALL_OPEN 4
 %define SYSCALL_READ 5
-
-sum:
-    mov eax, SYSCALL_SUM
-    int 0x80
-    ret
+%define SYSCALL_SBRK 6
 
 print:
     mov eax, SYSCALL_PRINT
@@ -43,5 +38,10 @@ fopen:
 
 fread:
     mov eax, SYSCALL_READ
+    int 0x80
+    ret
+
+sbrk:
+    mov eax, SYSCALL_SBRK
     int 0x80
     ret

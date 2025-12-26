@@ -23,6 +23,11 @@ struct process
     void *stack;
 
     uint32_t size;
+    
+    // The program break (current end of the heap)
+    void* cur_end_heap;
+    // The absolute end of the program data (initial break addr)
+    void* bin_end_addr;
 
     struct keyboard keyboard;
 };
@@ -34,5 +39,6 @@ int process_load_data(const char* filename, struct process* process);
 struct process* get_process(int pid);
 struct process* get_cur_process();
 void set_cur_process(struct process* process);
+void* process_sbrk(struct process* proc, int increment);
 int process_load(const char *filename, struct process **process);
 #endif

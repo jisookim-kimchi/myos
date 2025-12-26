@@ -14,7 +14,7 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/process.o \
 		$(BUILD_DIR)/task/task.asm.o \
 		$(BUILD_DIR)/isr80h/isr80h.o \
-		$(BUILD_DIR)/isr80h/misc.o \
+		$(BUILD_DIR)/isr80h/user_heap.o \
 		$(BUILD_DIR)/isr80h/io.o \
 		$(BUILD_DIR)/keyboard/keyboard.o \
 		$(BUILD_DIR)/timer/timer.o \
