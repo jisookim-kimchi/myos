@@ -23,11 +23,11 @@ int main()
 
   if (p1 == p2)
   {
-      print("SUCCESS: Memory Reused!\n");
+      print("SUCCESS\n");
   }
   else
   {
-      print("NOTE: Memory not reused.\n");
+      print("FAILED\n");
   }
 
   int fd = fopen("0:/test.txt", "r");

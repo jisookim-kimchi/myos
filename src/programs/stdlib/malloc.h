@@ -9,6 +9,7 @@ struct malloc_header
     uint32_t size;
     uint32_t is_free;
     struct malloc_header *next;
+    struct malloc_header *prev;
 };
 
 // Memory Management
