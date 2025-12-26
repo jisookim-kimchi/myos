@@ -305,7 +305,6 @@ int fclose(int fd)
     return -MYOS_INVALID_ARG;
   }
   res = desc->filesystem->close(desc->private);
-
   if (file_descriptors[fd - 1] == desc)
   {
     file_descriptors[fd - 1] = 0;

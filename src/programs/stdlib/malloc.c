@@ -25,7 +25,7 @@ void *malloc(size_t size)
             if (cur->size >= size + sizeof(struct malloc_header) + 1)
             {
                 struct malloc_header *new_free = (struct malloc_header *)((char *)(cur + 1) + size);
-                new_free->size = cur->size - size - sizeof(struct malloc_header);
+                new_free->size = cur->size - (size + sizeof(struct malloc_header));
                 new_free->is_free = 1;
                 new_free->next = cur->next;
                 new_free->prev = cur;

@@ -13,6 +13,8 @@ static int fat16_get_cluster_size(struct disk* disk,struct fat_private* private)
 static struct fat_directory* fat16_load_for_sub_directory(struct disk* disk, struct fat_directory_item* item);
 static struct fat_item *fat16_new_item_from_directory_item(struct disk *disk, struct fat_directory_item *directory_item);
 static int fat16_get_next_cluster(struct disk* disk, int cur_cluster);
+static int fat16_set_next_cluster(struct disk *disk, int cluster, int next_cluster);
+int fat16_update_directory_entry(struct disk *disk, struct fat_file_descriptor *file_descriptor, int bytes_written);
 
 //gloabl struct resolve, open, name
 filesystem_t fat16_filesystem = 
@@ -41,6 +43,11 @@ filesystem_t *fat16_init()
 {
     ft_strcpy(fat16_filesystem.name, "FAT16");
     return &fat16_filesystem;
+}
+
+static int fat16_get_first_cluster(struct fat_directory_item* item)
+{
+    return item->low_16_bits_first_cluster | (item->high_16_bits_first_cluster << 16);
 }
 
 static void fat16_private_init(struct disk* disk, struct fat_private* fat_private)
@@ -188,6 +195,17 @@ out:
     return res;
 }
 
+static int fat16_free_cluster_chain(struct disk* disk, uint32_t cluster)
+{
+    while (cluster != 0 && cluster < 0xFFF8)
+    {
+        uint32_t next = fat16_get_next_cluster(disk, cluster);
+        fat16_set_next_cluster(disk, cluster, FAT16_UNUSED);
+        cluster = next;
+    }
+    return 0;
+}
+
 //we consider just only for READONLY in moment
 void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
 {
@@ -217,6 +235,7 @@ void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
         return ERROR(-MYOS_FILE_NOT_FOUND);
     }
     desc->pos = 0;
+
     return desc;
 }
 
@@ -423,11 +442,6 @@ static int fat16_get_next_cluster(struct disk* disk, int cur_cluster)
     
     // 4. FAT 항목 값 반환
     return (int)next_cluster_val;
-}
-
-static int fat16_get_first_cluster(struct fat_directory_item* item)
-{
-    return item->low_16_bits_first_cluster | (item->high_16_bits_first_cluster << 16);
 }
 
 //ending sector_pos + (cluster -2 * secctors per cluster) why?

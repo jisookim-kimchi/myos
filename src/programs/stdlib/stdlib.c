@@ -53,3 +53,18 @@ void print_hex(uint32_t n)
     print(buf);
 }
 
+size_t ft_strlen(const char *str)
+{
+    size_t len = 0;
+    while (str[len])
+        len++;
+    return len;
+}
+
+char *ft_strcpy(char *dest, const char *src)
+{
+    char *d = dest;
+    while ((*d++ = *src++));
+    return dest;
+}
+

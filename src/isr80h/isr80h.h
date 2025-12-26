@@ -9,6 +9,8 @@ enum SystemCommands
   SYSTEM_COMMAND4_OPEN,
   SYSTEM_COMMAND5_READ,
   SYSTEM_COMMAND6_SBRK,
+  SYSTEM_COMMAND7_CLOSE,
+  SYSTEM_COMMAND8_WRITE,
 };
 
 void isr80h_register_command_call();

@@ -8,6 +8,8 @@ global sleep
 global fopen
 global fread
 global sbrk
+global fclose
+global fwrite
 
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
@@ -15,6 +17,8 @@ global sbrk
 %define SYSCALL_OPEN 4
 %define SYSCALL_READ 5
 %define SYSCALL_SBRK 6
+%define SYSCALL_CLOSE 7
+%define SYSCALL_WRITE 8
 
 print:
     mov eax, SYSCALL_PRINT
@@ -43,5 +47,15 @@ fread:
 
 sbrk:
     mov eax, SYSCALL_SBRK
+    int 0x80
+    ret
+
+fclose:
+    mov eax, SYSCALL_CLOSE
+    int 0x80
+    ret
+
+fwrite:
+    mov eax, SYSCALL_WRITE
     int 0x80
     ret

@@ -30,23 +30,41 @@ int main()
       print("FAILED\n");
   }
 
-  int fd = fopen("0:/test.txt", "r");
-  sleep(1);
-  if (fd >= 0)
+  int fd = fopen("0:/test.txt", "w");
+  if (fd < 0)
   {
-    char buf[1025];
-    print("Shell: Success \n");
-    int res = fread(fd, buf, 1, 1024);
-    if (res >= 0)
-    {
-      buf[res] = '\0';
-    }
-    print(buf);
-    print("\n");
+      print("Error for writing\n");
   }
   else
   {
-    print("Shell: Open failed!\n");
+      char* message = "Write Test!";
+      fwrite(message, 1, 11, fd);
+      print("bytes written.\n");
+
+      fclose(fd);
+
+      fd = fopen("0:/test.txt", "r");
+      if (fd >= 0)
+      {
+          char buf[1025];
+          int res = fread(fd, buf, 1, 1024);
+          if (res > 0)
+          {
+              buf[res] = '\0';
+              print("Read: ");
+              print(buf);
+              print("\n");
+          }
+          else
+          {
+              print("Read failed\n");
+          }
+          fclose(fd);
+      }
+      else
+      {
+          print("Failed to open file\n");
+      }
   }
   print("MYOS>> ");
   while (1)

@@ -285,6 +285,24 @@ int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size)
   return 0;
 }
 
+int copy_from_task(struct task *task, void *user_buf, void *kernel_buf, int size)
+{
+  if (size <= 0 || !kernel_buf || !user_buf)
+    return -MYOS_INVALID_ARG;
+
+  // Security Check: Ensure the virtual address and the end of the buffer are within the user zone (>= 256MB)
+  if ((uint32_t)user_buf < MYOS_MEMORY_BOUNDARY || ((uint32_t)user_buf + size) < MYOS_MEMORY_BOUNDARY)
+  {
+      return -MYOS_INVALID_ARG;
+  }
+
+  paging_switch(task->page_directory);
+  ft_memcpy(kernel_buf, user_buf, size);
+  paging_switch(paging_get_kernel_chunk());
+
+  return 0;
+}
+
 void task_wakeup(void *event_wait_channel)
 {
   struct task *t = task_head;

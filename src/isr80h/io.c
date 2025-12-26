@@ -114,3 +114,45 @@ void *sys_call5_fread(struct interrupt_frame *frame)
   kernel_free(kernel_buf);
   return (void *)(uintptr_t)res;
 }
+
+void *sys_call7_fclose(struct interrupt_frame *frame)
+{
+  struct task *t = get_cur_task();
+  if (!t)
+  {
+    return 0;
+  }
+
+  int fd = (int)(uintptr_t)task_get_stack_item(t, 1);
+  int res = fclose(fd);
+  return (void *)(uintptr_t)res;
+}
+
+// user -> kernel -> disk
+void *sys_call8_fwrite(struct interrupt_frame *frame)
+{
+  struct task *t = get_cur_task();
+  if (!t)
+  {
+    return 0;
+  }
+
+  // int fwrite(void *ptr, uint32_t size, uint32_t nmemb, int fd)
+  void *buffer = task_get_stack_item(t, 1);
+  uint32_t size = (uint32_t)(uintptr_t)task_get_stack_item(t, 2);
+  uint32_t nmemb = (uint32_t)(uintptr_t)task_get_stack_item(t, 3);
+  int fd = (int)(uintptr_t)task_get_stack_item(t, 4);
+
+  int total = size * nmemb;
+  char *kernel_buf = kernel_malloc(total);
+  if (!kernel_buf)
+  {
+    return 0;
+  }
+
+  copy_from_task(t, buffer, kernel_buf, total);
+
+  int res = fwrite(kernel_buf, size, nmemb, fd);
+  kernel_free(kernel_buf);
+  return (void *)(uintptr_t)res;
+}
