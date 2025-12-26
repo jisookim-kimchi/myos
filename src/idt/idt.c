@@ -79,7 +79,6 @@ void idt_init()
     //idt_register_interrupt_callback(0x2C, mouse_handle_interrupt);
   idt_register_interrupt_callback(0x21, keyboard_handle_interrupt);
   idt_register_interrupt_callback(0x80, isr80h_handler);
-  idt_register_interrupt_callback(0x80, isr80h_handler);
 
   idt_load(&idtr_descriptor);
 }
@@ -126,9 +125,29 @@ void isr80h_handler(struct interrupt_frame* frame)
     int ask = frame->eax; // System call command is in EAX
     change_to_kernel_page();
     save_registers(frame);
+    
+    /*
+    print("Kernel: Syscall ID ");
+    print_int(ask);
+    print(" entry at IP ");
+    print_int(frame->ip);
+    print(" (RA: ");
+    print_int((uint32_t)(uintptr_t)task_get_stack_item(get_cur_task(), 0));
+    print(", Arg1: ");
+    print_int((uint32_t)(uintptr_t)task_get_stack_item(get_cur_task(), 1));
+    print(")\n");
+    */
+
     res = isr80h_handle_command(ask, frame);
-    frame->eax = (uint32_t)res;
-    paging_switch(get_cur_task()->page_directory);
+    frame->eax = (uint32_t)(uintptr_t)res;
+
+    struct task* t = get_cur_task();
+    if (t)
+    {
+        paging_switch(t->page_directory);
+    }
+    
+    // print("Kernel: Syscall done, returning to user land\n");
 }
 
 //save the cur task;s state
@@ -138,17 +157,21 @@ void interrupt_handler(struct interrupt_frame* frame)
 {
     int interrupt = frame->vector_number;
 
+    //EOI send to PIC
+    // Acknowledge hardware interrupts BEFORE calling the callback.
+    // This is vital because if the callback switches tasks (like the timer), 
+    // it never returns to this function, and the PIC would remain blocked.
+    if (interrupt >= 0x20 && interrupt < 0x30)
+    {
+        outsb(0x20, 0x20); // Master PIC EOI
+        if (interrupt >= 0x28)
+        {
+            outsb(0xA0, 0x20); // Slave PIC EOI
+        }
+    }
+
     if (interrupt_callbacks[interrupt] != 0)
     {
         interrupt_callbacks[interrupt](frame);
-    }
-    
-    if (interrupt >= 0x20 && interrupt < 0x30) //hardware intterupt..
-    {
-        outsb(0x20, 0x20);
-        if (interrupt >= 0x28) //if it is slave pic
-        {
-            outsb(0xA0, 0x20);
-        }
     }
 }

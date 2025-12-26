@@ -128,11 +128,16 @@ int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val)
 //virt addr mapping with phys addr 
 int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags)
 {
-    if (((unsigned int)virt % PAGING_PAGE_SIZE_BYTES) || ((unsigned int)phys % PAGING_PAGE_SIZE_BYTES))
+    if (((unsigned int)virt % PAGING_PAGE_SIZE_BYTES))
     {
         return -MYOS_INVALID_ARG;
     }
-    return paging_set(directory->directory_entry, virt, (uint32_t)phys | flags);
+    
+    // Physical address doesn't strictly need to be aligned for the mapping logic 
+    // itself as long as we only use the page-aligned part for the entry.
+    uint32_t phys_addr = (uint32_t)phys & 0xFFFFF000;
+    
+    return paging_set(directory->directory_entry, virt, phys_addr | flags);
 }
 
 int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys,

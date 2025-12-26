@@ -1,33 +1,39 @@
 #include "../stdlib/stdlib.h"
 
-
 int main()
 {
-    while(1)
+  print("Shell: Starting...\n");
+  int fd = fopen("0:/test.txt", "r");
+  sleep(1);
+  if (fd >= 0)
+  {
+    char buf[1025];
+    print("Shell: Success \n");
+    int res = fread(fd, buf, 1, 1024);
+    if (res >= 0)
     {
-        print("MyOS> ");
-        while(1)
-        {
-            int key = getkey();
-            // Enter key (13 = \r, 10 = \n)
-            if (key == 13 || key == 10)
-            {
-                print("\n");
-                break;
-            }
-            
-            // Backspace (8)
-            if (key == 8)
-            {
-                print("\b");
-                continue;
-            }
-            
-            // Normal character
-            putchar(key);
-            // if (key > 0)
-            //     sleep(300);
-        }
+      buf[res] = '\0';
     }
-    return 0;
+    print(buf);
+  }
+  else
+  {
+    print("Shell: Open failed!\n");
+  }
+  print("MYOS>> ");
+  while (1)
+  {
+    char c = getkey();
+    if (c == '\n')
+    {
+      print("\nMYOS>> ");
+      continue;
+    }
+    putchar(c);
+    if (c == 'q')
+    {
+      break;
+    }
+  }
+  return 0;
 }

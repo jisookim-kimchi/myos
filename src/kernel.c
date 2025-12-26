@@ -31,18 +31,32 @@ void terminal_putchar(char c, uint8_t color, size_t x, size_t y) {
   video_memory[index] = terminal_make_char(c, color);
 }
 
+void terminal_scroll() {
+  for (int y = 0; y < VGA_HEIGHT - 1; y++) {
+    for (int x = 0; x < VGA_WIDTH; x++) {
+      video_memory[y * VGA_WIDTH + x] = video_memory[(y + 1) * VGA_WIDTH + x];
+    }
+  }
+  for (int x = 0; x < VGA_WIDTH; x++) {
+    terminal_putchar(' ', 0x00, x, VGA_HEIGHT - 1);
+  }
+  terminal_row = VGA_HEIGHT - 1;
+}
+
 void terminal_write_char(char c, uint8_t color) {
   if (c == '\n') {
     terminal_column = 0;
     terminal_row++;
+    if (terminal_row >= VGA_HEIGHT) {
+      terminal_scroll();
+    }
     return;
   }
   if (c == 0x08) // backspace
   {
     if (terminal_column > 0) {
       terminal_column--;
-      terminal_write_char(' ', 0x0F);
-      terminal_column--;
+      terminal_putchar(' ', 0x0F, terminal_column, terminal_row);
     }
     return;
   }
@@ -51,6 +65,9 @@ void terminal_write_char(char c, uint8_t color) {
   if (terminal_column >= VGA_WIDTH) {
     terminal_column = 0;
     terminal_row++;
+    if (terminal_row >= VGA_HEIGHT) {
+      terminal_scroll();
+    }
   }
 }
 
@@ -111,6 +128,8 @@ void change_to_kernel_page(void) {
   paging_switch(kernel_chunk);
 }
 
+paging_4gb_chunk_t *paging_get_kernel_chunk(void) { return kernel_chunk; }
+
 void __attribute__((section(".entry"))) start(void) {
   kernel_registers();
   paging_switch(kernel_chunk);
@@ -122,7 +141,9 @@ struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] = {
     {.base = 0x00, .limit = 0x00, .type = 0x00},       // NULL Segment
     {.base = 0x00, .limit = 0xffffffff, .type = 0x9a}, // Kernel code segment
     {.base = 0x00, .limit = 0xffffffff, .type = 0x92}, // Kernel data segment
-    {.base = 0x00, .limit = 0xffffffff, .type = 0xf8}, // User code segment
+    {.base = 0x00,
+     .limit = 0xffffffff,
+     .type = 0xfa}, // User code segment (Read/Execute)
     {.base = 0x00, .limit = 0xffffffff, .type = 0xf2}, // User data segment
     {.base = (uint32_t)&tss, .limit = sizeof(tss), .type = 0xE9} // TSS Segment
 };
@@ -151,7 +172,8 @@ void kernel_main() {
 
   // Load the TSS
   tss_load(0x28);
-  enable_interrupts();
+  // Move interrupts enable to later
+  // enable_interrupts();
 
   file_system_init();
 
@@ -208,6 +230,7 @@ void kernel_main() {
     panic("process_load failed!\n");
   }
 
+  enable_interrupts();
   task_run_first_ever_task();
   while (1) {
   }

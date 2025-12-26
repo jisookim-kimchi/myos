@@ -33,8 +33,9 @@ void timer_handle_interrupt(struct interrupt_frame *frame)
 
   // Round Robin Scheduler
   // Only switch if we have a current task (multitasking initialized)
-  // and don't switch on every single tick if you want timeslices (tick %10 == 0) For now, switch on every tick for responsiveness testing.
-  if (get_cur_task())
+  // and ONLY if the interrupt happened in user mode (Ring 3).
+  // This prevents the scheduler from preempting the kernel during critical paths like syscalls.
+  if (get_cur_task() && (frame->cs & 0x03) == 0x03)
   {
       struct task* next_task = get_next_task();
       if (next_task && next_task != get_cur_task())

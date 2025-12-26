@@ -5,10 +5,7 @@ SECTIONS
     . = 0x400000;
     .text : ALIGN(4096)
     {
-        *(.text) 
-    }
-    .asm : ALIGN(4096)
-    {
+        *(.text)
         *(.asm)
     }
     .rodata : ALIGN(4096)

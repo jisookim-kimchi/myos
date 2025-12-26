@@ -71,6 +71,9 @@ struct task *new_task(struct process *proc)
   if (task_cur == NULL)
   {
     task_cur = task;
+    print("Kernel: new_task: task_cur set to ");
+    print_int((uint32_t)(uintptr_t)task_cur);
+    print("\n");
   }
   return task;
 }
@@ -195,6 +198,9 @@ void *task_get_stack_item(struct task *task, int index)
 
 void task_run_first_ever_task()
 {
+  print("Kernel: task_run_first_ever_task: task_cur=");
+  print_int((uint32_t)(uintptr_t)task_cur);
+  print("\n");
   if (!task_cur)
   {
     panic("task_run_first_ever_task(): No current task exists!\n");
@@ -209,15 +215,22 @@ void save_registers(struct interrupt_frame *frame)
 {
   if (!get_cur_task())
   {
-    panic("No current task to save\n");
+    return;
   }
 
   struct task *task = get_cur_task();
   task->regs.ip = frame->ip;
   task->regs.cs = frame->cs;
   task->regs.flags = frame->flags;
-  task->regs.esp = frame->esp;
-  task->regs.ss = frame->ss;
+  
+  // Only save SS and ESP if we came from user mode (Ring 3)
+  // Low 2 bits of CS are the Current Privilege Level (CPL)
+  if ((frame->cs & 0x03) == 0x03)
+  {
+      task->regs.esp = frame->esp;
+      task->regs.ss = frame->ss;
+  }
+  
   task->regs.eax = frame->eax;
   task->regs.ebp = frame->ebp;
   task->regs.ebx = frame->ebx;
@@ -229,56 +242,29 @@ void save_registers(struct interrupt_frame *frame)
 
 // to make print sys call we need to copy string from task's memory space to
 // kernel it means, we need to pass the string from user space ---> kernel space
-int copy_string_from_task(struct task *task, void *virtual, void *phys,
-                          int max)
+int copy_string_from_task(struct task *task, void *virtual, void *phys, int max)
 {
-  if (max >= PAGING_PAGE_SIZE_BYTES)
-  {
+  if (max <= 0 || !virtual || !phys)
     return -MYOS_INVALID_ARG;
-  }
 
-  int res = 0;
-  char *tmp = kernel_zero_alloc(max);
-  if (!tmp)
-  {
-    res = -MYOS_ERROR_NO_MEMORY;
-    goto out;
-  }
-
-  uint32_t *task_directory = task->page_directory->directory_entry;
-  // 1. 기존 매핑 정보 저장 (나중에 복구 위해) 특정한 책의 장을 저장해놨고.
-  uint32_t old_entry = paging_get(task_directory, tmp);
-
-  // 2. 커널 버퍼(tmp)를 사용자 페이지 테이블에도 매핑 (책의 해당 주소 장을
-  // 찾기...) 근데 안에 paging_set함수가있어서 tmp로 낙서하게됨..
-  paging_map(task->page_directory, tmp, tmp,
-             PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
-
-  // 3. 사용자 페이지로 전환 (User World로 이동)
   paging_switch(task->page_directory);
+  ft_strncpy(phys, virtual, max);
+  ((char*)phys)[max-1] = '\0';
+  paging_switch(paging_get_kernel_chunk());
 
-  // 4. 데이터 복사 (User Virtual -> Kernel Temp)
-  // 이제 tmp는 두 세계 모두에서 보입니다.
-  ft_strncpy(tmp, virtual, max);
+  return 0;
+}
 
-  // 5. 커널 페이지로 복귀
-  change_to_kernel_page();
+int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size)
+{
+  if (size <= 0 || !kernel_buf || !user_buf)
+    return -MYOS_INVALID_ARG;
 
-  // 6. 원래 페이지값으로 복구.
-  res = paging_set(task_directory, tmp, old_entry);
-  if (res < 0)
-  {
-    res = -MYOS_IO_ERROR;
-    goto out_free;
-  }
+  paging_switch(task->page_directory);
+  ft_memcpy(user_buf, kernel_buf, size);
+  paging_switch(paging_get_kernel_chunk());
 
-  // 7. 최종 목적지(phys)로 이동
-  ft_strncpy(phys, tmp, max);
-
-out_free:
-  kernel_free(tmp);
-out:
-  return res;
+  return 0;
 }
 
 void task_wakeup(void *event_wait_channel)

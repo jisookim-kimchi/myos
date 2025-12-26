@@ -133,6 +133,13 @@ FILE_MODE get_filemode(const char *str)
 int fopen(const char *filename, const char *mode)
 {
   int res = 0;
+
+  print("Kernel: fopen(filename=\"");
+  print(filename);
+  print("\", mode=\"");
+  print(mode);
+  print("\") called\n");
+
   struct path_root *root_path = parse_path(filename, NULL);
   if (!root_path)
   {

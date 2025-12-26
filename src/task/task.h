@@ -66,6 +66,7 @@ void restore_registers(struct registers* regs);
 void user_registers();
 void save_registers(struct interrupt_frame *frame);
 int copy_string_from_task(struct task* task, void* virtual, void* phys, int max);
+int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size);
 void* task_get_stack_item(struct task* task, int index);
 
 void task_block(void *event_wait_channel);

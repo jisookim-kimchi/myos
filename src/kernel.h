@@ -22,6 +22,7 @@ void terminal_write_char(char c, uint8_t color);
 void print_int(int v);
 void panic(const char *msg);
 void change_to_kernel_page(void);
+struct paging_4gb_chunk *paging_get_kernel_chunk(void);
 void kernel_registers();
 void enable_interrupts();
 void disable_interrupts();

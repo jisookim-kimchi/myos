@@ -137,6 +137,10 @@ int process_map_binary(struct process *proc)
     }
 
     struct task *t = new_task(proc);
+    print("Kernel: process_load_for_slot: new_task returned ");
+    print_int((uint32_t)(uintptr_t)t);
+    print("\n");
+
     if (!t) 
     {
         kernel_free(stack_ptr);

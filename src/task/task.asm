@@ -53,17 +53,14 @@ task_return:
     iretd
 
 restore_registers:
-    push ebp  ;이전의 함수 베이스프레임 push 하면 esp-4 됨.
-    mov ebp, esp ;근데 난 현재 함수의 베이스프레임을 저장할 거야. ebp: 베이스프레임 포인터 esp : 스택프레임에서 최고 상단을 가리키는 포인터.
-    mov ebx, [ebp+8] ;  esp +4는 첫번째인잔데 -4감소햇으니 +8
+    mov ebx, [esp+4] ; Load the pointer to the registers struct (1st argument)
     mov edi, [ebx]
     mov esi, [ebx+4]
     mov ebp, [ebx+8]
     mov edx, [ebx+16]
     mov ecx, [ebx+20]
     mov eax, [ebx+24]
-    mov ebx, [ebx+12]
-    pop ebp  ;이전 ebp 의 값을 새 스택프레임 esp 로 복구시킨다. pop: 스택 최상단 esp가 가리키는 주소를 읽는다. 그리고 esp 에 넣는다 그리고 esp 를 4바이트증가시킴.
+    mov ebx, [ebx+12] ; Restore EBX last!
     ret
 
 

@@ -17,7 +17,8 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/isr80h/misc.o \
 		$(BUILD_DIR)/isr80h/io.o \
 		$(BUILD_DIR)/keyboard/keyboard.o \
-		$(BUILD_DIR)/timer/timer.o
+		$(BUILD_DIR)/timer/timer.o \
+		$(BUILD_DIR)/lock/lock.asm.o
 
 INCLUDES = -I$(SRC_DIR)/
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
@@ -68,6 +69,7 @@ programs:
 
 programs_clean:
 	cd ./src/programs/blank && $(MAKE) clean
+	cd ./src/programs/shell && $(MAKE) clean
 
 clean: programs_clean
 	rm -rf $(BIN_DIR)/*
