@@ -53,11 +53,10 @@ int disk_stream_read(struct disk_streamer* streamer, void* out, int total)
         int sector_index = streamer->pos / sector_size;
         int offset = streamer->pos % sector_size;
         int to_read = total;
-if (to_read > (sector_size - offset))
-{
-    to_read = sector_size - offset;
-}
-
+        if (to_read > (sector_size - offset))
+        {
+            to_read = sector_size - offset;
+        }
         int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
         if (res < 0)
         {
