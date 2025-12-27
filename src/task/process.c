@@ -152,7 +152,7 @@ int process_map_binary(struct process *proc)
     int res = process_load_data(filename, proc);
     if (res < 0)
     {
-        kernel_free(t);
+        task_delete(t);
         kernel_free(stack_ptr);
         kernel_free(proc);
         return res;
@@ -173,7 +173,7 @@ int process_map_binary(struct process *proc)
     int rc = process_map_memory(proc);
     if (rc < 0) 
     {
-        kernel_free(t);
+        task_delete(t);
         kernel_free(stack_ptr);
         kernel_free(proc);
         return rc;               

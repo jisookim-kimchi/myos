@@ -188,8 +188,7 @@ void *task_get_stack_item(struct task *task, int index)
   uint32_t offset = virtual_addr & 0xFFF;
 
   // Get the physical address using the task's page directory
-  uint32_t entry = paging_get(task->page_directory->directory_entry,
-                              (void *)aligned_virtual_addr);
+  uint32_t entry = paging_get(task->page_directory->directory_entry, (void *)aligned_virtual_addr);
 
   // Extract physical page address (mask out flags)
   uint32_t phys_page = entry & 0xFFFFF000;

@@ -1,6 +1,5 @@
 #include "heap.h"
-#include "../../kernel.h"
-#include "memory/memory.h"
+#include "../memory.h"
 #include "../../status.h"
 
 static int heap_validate_table(void *ptr, void *end, heap_table_t *table)
@@ -130,16 +129,23 @@ void heap_mark_blocks_free(heap_t *heap, int start_block)
     if (!heap || start_block < 0)
         return ;
     heap_table_t* heap_table = heap->table;
+
+    // Ensure we are freeing from the start of an allocation
+    if (!(heap_table->entries[start_block] & HEAP_BLOCK_IS_FIRST))
+    {
+        return;
+    }
+
     int cur = start_block;
     while (cur < (int)heap_table->total_size)
     {
         HEAP_BLOCK_TABLE_ENTRY entry = heap_table->entries[cur];
-
-        /* If this block is not marked as taken, stop. */
-        if ((entry & HEAP_BLOCK_TABLE_ENTRY_TAKEN) == 0)
-            break;
-        /* Free this block */
         heap_table->entries[cur] = HEAP_BLOCK_TABLE_ENTRY_FREE;
+        if (!(entry & HEAP_BLOCK_HAS_NEXT))
+        {
+            break;
+        }
+
         cur++;
     }
 }
@@ -152,21 +158,16 @@ void heap_mark_blocks_as_taken(heap_t *heap, int start_block, int total_blocks)
 
     int end_block_index = (start_block + total_blocks) - 1;
 
-    //first block and set taken flags
     HEAP_BLOCK_TABLE_ENTRY entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN | HEAP_BLOCK_IS_FIRST;
     if (total_blocks > 1)
     {
         entry |= HEAP_BLOCK_HAS_NEXT;
     }
-
-    // Mark first block
     heap->table->entries[start_block] = entry;
-    
-    // Mark remaining blocks
     for (int i = start_block + 1; i < start_block + total_blocks; i++)
     {
         entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN;
-        if (i < end_block_index)  // Not the last block
+        if (i < end_block_index)
         {
             entry |= HEAP_BLOCK_HAS_NEXT;
         }
@@ -203,6 +204,5 @@ void my_free(heap_t *heap, void *ptr)
 {
     if (ptr == NULL)
         return;
-    // Calculate the block index and free the blocks
     heap_mark_blocks_free(heap, heap_address_to_block(heap, ptr));
 }
