@@ -222,8 +222,8 @@ void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
             int res = fat16_create_file(disk, path);
             if (res < 0)
             {
-                 kernel_free(desc);
-                 return ERROR(res);
+                kernel_free(desc);
+                return ERROR(res);
             }
             desc->item = fat16_get_dir_entry(disk, path);
         }
@@ -236,7 +236,23 @@ void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode)
     }
     desc->pos = 0;
 
-    return desc;
+    if (mode == FILE_MODE_WRITE)
+    {
+        struct fat_directory_item *item = desc->item->dir_item;
+        int first_cluster = fat16_get_first_cluster(item);
+        if (first_cluster != 0)
+        {
+            print("Truncating file: freeing clusters...\n");
+            fat16_free_cluster_chain(disk, first_cluster);
+            item->low_16_bits_first_cluster = 0;
+            item->high_16_bits_first_cluster = 0;
+            item->filesize = 0;
+            fat16_update_directory_entry(disk, desc, 0);
+            print("Truncation complete.\n");
+        }
+    }
+
+  return desc;
 }
 
 struct fat_item *fat16_get_dir_entry(struct disk *disk, struct path_part *path)
@@ -664,20 +680,24 @@ int fat16_unresolve(struct disk *disk)
 
 int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out)
 {
-    struct fat_file_descriptor *ffd = private_data;
-    
-    if (!ffd || !ffd->item)
-        return -MYOS_INVALID_ARG;
+  struct fat_file_descriptor *ffd = private_data;
 
-    uint32_t total_bytes = read_size * nmemb;
+  if (!ffd || !ffd->item)
+    return -MYOS_INVALID_ARG;
 
-    uint32_t first_cluster = fat16_get_first_cluster(ffd->item->dir_item);
+  struct fat_directory_item *item = ffd->item->dir_item;
+  uint32_t total_bytes = read_size * nmemb;
 
-    return fat16_read_internal(disk,
-                               first_cluster,
-                               offset,
-                               total_bytes,
-                               out);
+  // Respect file size
+  if (offset >= item->filesize)
+    return 0;
+
+  if (offset + total_bytes > item->filesize)
+    total_bytes = item->filesize - offset;
+
+  uint32_t first_cluster = fat16_get_first_cluster(item);
+
+  return fat16_read_internal(disk, first_cluster, offset, total_bytes, out);
 }
 
 int fat16_seek(void *private, int offset, FILE_SEEK_MODE seek_mode)

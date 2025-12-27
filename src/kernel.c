@@ -137,20 +137,24 @@ void __attribute__((section(".entry"))) start(void) {
 
 struct tss tss;
 struct gdt gdt_real[MYOS_TOTAL_GDT_SEGMENTS];
-struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] = {
+struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] =
+{
     {.base = 0x00, .limit = 0x00, .type = 0x00},       // NULL Segment
     {.base = 0x00, .limit = 0xffffffff, .type = 0x9a}, // Kernel code segment
     {.base = 0x00, .limit = 0xffffffff, .type = 0x92}, // Kernel data segment
-    {.base = 0x00,
-     .limit = 0xffffffff,
-     .type = 0xfa}, // User code segment (Read/Execute)
+    {.base = 0x00, .limit = 0xffffffff, .type = 0xfa}, // User code segment (Read/Execute)
     {.base = 0x00, .limit = 0xffffffff, .type = 0xf2}, // User data segment
-    {.base = (uint32_t)&tss, .limit = sizeof(tss), .type = 0xE9} // TSS Segment
+    {.base = 0x00, .limit = sizeof(tss), .type = 0xE9} // TSS Segment
 };
 
-void kernel_main() {
-  init_terminal(); // 화면을 회색 배경으로 초기화
-  // print("Hello, Kernel World!\n");
+void kernel_main()
+{
+  init_terminal();
+
+  // [중요] GDT에 TSS의 실제 주소를 설정합니다.
+  // 컴파일 시점에는 tss 변수의 위치를 모르기 때문에 실행 시점에 넣어줘야
+  // 합니다.
+  gdt_structured[5].base = (uint32_t)&tss;
 
   ft_memset(gdt_real, 0x00, sizeof(gdt_real));
   kernel_gdt_to_cpu_gdt(gdt_real, gdt_structured, MYOS_TOTAL_GDT_SEGMENTS);

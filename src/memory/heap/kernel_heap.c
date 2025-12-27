@@ -46,7 +46,7 @@ void *kernel_malloc(size_t size)
 
 void *kernel_zero_alloc(size_t size)
 {
-    void *ptr = my_malloc(&kernel_heap, size);
+    void *ptr = kernel_malloc(size);
     if (ptr)
     {
         ft_memset(ptr, 0, size);
