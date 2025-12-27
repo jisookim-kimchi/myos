@@ -37,100 +37,91 @@ int disk_stream_seek(struct disk_streamer* streamer, uint32_t position)
     return   : 읽은 바이트 수 또는 오류 코드
 */
 
-int disk_stream_read(struct disk_streamer* streamer,void*out, int total)
+int disk_stream_read(struct disk_streamer* streamer, void* out, int total)
 {
-    if (streamer == NULL)
+    if (streamer == NULL || total <= 0)
     {
         return -MYOS_INVALID_ARG;
     }
-    int sector_index = streamer->pos / streamer->disk->sector_size; //100 / 512 = 0
-    int offset = streamer->pos % streamer->disk->sector_size; //100 % 512 = 100
+
+    int bytes_read = 0;
     unsigned char buffer[MYOS_SECTOR_SIZE];
-
-    // 먼저 섹터 전체를 읽음
-    int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
-    if (res < 0)
-    {
-        goto out;
-    }
-
     int sector_size = streamer->disk->sector_size;
-    int to_read = total > sector_size ? sector_size : total;
-    for (int i = 0; i < to_read; i++)
-    {
-        ((unsigned char*)out)[i] = buffer[offset + i];
-    }
 
-    // update streamer status
-    streamer->pos += to_read;
-    if (total > sector_size)
+    while (total > 0)
     {
-        // write the next chunk after the data we've already written
-        res = disk_stream_read(streamer, (unsigned char*)out + to_read, total - to_read);
-        if (res >= 0)
-        {
-            res += to_read; // accumulate bytes read
-        }
-    }
-    else
-    {
-        res = to_read;
-    }
-
-out:
-    return res;
+        int sector_index = streamer->pos / sector_size;
+        int offset = streamer->pos % sector_size;
+        int to_read = total;
+if (to_read > (sector_size - offset))
+{
+    to_read = sector_size - offset;
 }
 
-int disk_stream_write(struct disk_streamer* streamer, void* in, int total)
+        int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
+        if (res < 0)
+        {
+            return res;
+        }
+
+        for (int i = 0; i < to_read; i++)
+        {
+            ((unsigned char*)out)[bytes_read + i] = buffer[offset + i];
+        }
+
+        streamer->pos += to_read;
+        bytes_read += to_read;
+        total -= to_read;
+    }
+
+    return bytes_read;
+}
+
+int disk_stream_write(struct disk_streamer* streamer, void *in, int total)
 {
-    if (streamer == NULL)
+    if (streamer == NULL || total <= 0)
     {
         return -MYOS_INVALID_ARG;
     }
-    int sector_index = streamer->pos / streamer->disk->sector_size;
-    int offset = streamer->pos % streamer->disk->sector_size;
+
+    int bytes_written = 0;
     unsigned char buffer[MYOS_SECTOR_SIZE];
-
-    int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
-    if (res < 0)
-    {
-        goto out;
-    }
-
     int sector_size = streamer->disk->sector_size;
-    int to_write = total;
-    if (total > (sector_size - offset))
-    {
-        to_write = sector_size - offset;
-    }
-    
-    for (int i = 0; i < to_write; i++)
-    {
-        buffer[offset + i] = ((unsigned char*)in)[i];
-    }
 
-    res = disk_write_block(streamer->disk, sector_index, 1, buffer);
-    if (res < 0)
+    while (total > 0)
     {
-        goto out;
-    }
-
-    streamer->pos += to_write;
-    if (total > to_write)
-    {
-        res = disk_stream_write(streamer, (unsigned char*)in + to_write, total - to_write);
-        if (res >= 0)
+        int sector_index = streamer->pos / sector_size;
+        int offset = streamer->pos % sector_size;
+        
+        int to_write = total;
+        if (to_write > (sector_size - offset))
         {
-            res += to_write;
+            to_write = sector_size - offset;
         }
-    }
-    else
-    {
-        res = to_write;
+
+        int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
+        if (res < 0)
+        {
+            return res;
+        }
+
+        for (int i = 0; i < to_write; i++)
+        {
+            buffer[offset + i] = ((unsigned char*)in)[bytes_written + i];
+        }
+
+        res = disk_write_block(streamer->disk, sector_index, 1, buffer);
+        if (res < 0)
+        {
+            return res;
+        }
+
+        streamer->pos += to_write;
+        bytes_written += to_write;
+        total -= to_write;
     }
 
-out:
-    return res;
+    return bytes_written;
 }
 
 void destroy_disk_streamer(struct disk_streamer* streamer)

@@ -10,6 +10,7 @@
 #define MYOS_ERROR_FILESYSTEM_NOT_SUPPORTED 6
 #define MYOS_FILE_NOT_FOUND  7
 #define MYOS_EOF             8
+#define MYOS_IO_TIMEOUT      9
 
 
 #endif

@@ -15,22 +15,29 @@ static void disk_400ns_delay()
 
 static int disk_wait_for_ready()
 {
-  while (insb(0x1F7) & 0x80)
-    ; // Wait for BSY bit to clear
+  int timeout = 1000000;
+  while ((insb(0x1F7) & 0x80) && --timeout > 0)
+    ;
+  
+  if (timeout <= 0)
+    return -MYOS_IO_TIMEOUT;
   return 0;
 }
 
 static int disk_wait_for_drq()
 {
   unsigned char status;
-  while (1)
+  int timeout = 1000000;
+  while (--timeout > 0)
   {
     status = insb(0x1F7);
     if (!(status & 0x80) && (status & 0x08))
       break;
     if (status & 0x01)
-      return -1;
+      return -MYOS_IO_ERROR;
   }
+  if (timeout <= 0)
+    return -MYOS_IO_TIMEOUT;
   return 0;
 }
 
@@ -40,7 +47,10 @@ static int disk_wait_for_drq()
 //lba sector number, total number of sectors to read, buffer to store data
 int disk_read_sectors(int lba, int total, void *buffer)
 {
-    disk_wait_for_ready();
+    int res = disk_wait_for_ready();
+    if (res < 0)
+        return res;
+
     outsb(0x1F6, (lba >> 24) | 0x40 | 0xE0); // 0x40 for LBA bit
     outsb(0x1F2, total);
     outsb(0x1F3, (unsigned char)(lba & 0xFF));
@@ -53,8 +63,9 @@ int disk_read_sectors(int lba, int total, void *buffer)
     unsigned short *ptr = (unsigned short *)buffer;
     for (int i = 0; i < total; i++)
     {
-        if (disk_wait_for_drq() < 0)
-            return -MYOS_IO_ERROR;
+        res = disk_wait_for_drq();
+        if (res < 0)
+            return res;
         for (int j = 0; j < 256; j++)
         {
             *ptr = insw(0x1F0);
@@ -66,7 +77,10 @@ int disk_read_sectors(int lba, int total, void *buffer)
 
 int disk_write_sectors(int lba, int total, void *buffer)
 {
-    disk_wait_for_ready();
+    int res = disk_wait_for_ready();
+    if (res < 0)
+        return res;
+
     outsb(0x1F6, (lba >> 24) | 0x40 | 0xE0); // 0x40 for LBA bit
     outsb(0x1F2, total);
     outsb(0x1F3, (unsigned char)(lba & 0xFF));
@@ -79,8 +93,9 @@ int disk_write_sectors(int lba, int total, void *buffer)
     unsigned short *ptr = (unsigned short *)buffer;
     for (int i = 0; i < total; i++)
     {
-        if (disk_wait_for_drq() < 0)
-            return -MYOS_IO_ERROR;
+        res = disk_wait_for_drq();
+        if (res < 0)
+            return res;
         for (int j = 0; j < 256; j++)
         {
             outsw(0x1F0, *ptr);
