@@ -7,6 +7,8 @@
 #include "../keyboard/keyboard.h"
 #include "../mouse/mouse.h"
 #include "../timer/timer.h"
+#include "../memory/heap/kernel_heap.h"
+#include "../memory/paging/paging.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 static INTERRUPT_CALLBACK_FUNCTION interrupt_callbacks[MYOS_TOTAL_INTERRUPTS];
@@ -20,6 +22,7 @@ extern void idt_load(struct idtr *ptr);
 //extern void int20h();
 //extern void isr80h_wrapper();
 extern void no_interrupts();
+extern uint32_t get_faulting_address();
 
 
 int idt_register_interrupt_callback(int interrupt, INTERRUPT_CALLBACK_FUNCTION interrupt_callback)
@@ -40,8 +43,27 @@ void no_interrupts_handler()
 void idt_zero()
 {
   // 나누기 오류 인터럽트 핸들러
-  print("\n*** DIVISION BY ZERO INTERRUPT CAUGHT! ***\n");
+  print("\n*** DIVISION BY ZERO INTERRUPT CAUGHT! in idt_zero()***\n");
   print("IDT is working correctly!\n");
+}
+
+
+void page_fault_handler(struct interrupt_frame* frame)
+{
+    uint32_t faulting_address;
+    faulting_address = get_faulting_address();
+    void* page = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
+    if (!page)
+    {
+        panic("OOM: Failed to allocate page for Lazy Paging");
+    }
+
+    faulting_address &= 0xFFFFF000;
+    int res = paging_map(get_cur_task()->page_directory, (void*)faulting_address, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
+    if (res < 0)
+    {
+        panic("Failed to map page for Lazy Paging");
+    }
 }
 
 void idt_set(int interrupt_number, void *address)
@@ -75,10 +97,11 @@ void idt_init()
   // idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
   // idt_set(0x80, isr80h_wrapper);      // 시스템 콜
   idt_register_interrupt_callback(0, idt_zero);
-    idt_register_interrupt_callback(0x20, timer_handle_interrupt);
+  idt_register_interrupt_callback(0x20, timer_handle_interrupt);
     //idt_register_interrupt_callback(0x2C, mouse_handle_interrupt);
   idt_register_interrupt_callback(0x21, keyboard_handle_interrupt);
   idt_register_interrupt_callback(0x80, isr80h_handler);
+  idt_register_interrupt_callback(0x0E, page_fault_handler);
 
   idt_load(&idtr_descriptor);
 }

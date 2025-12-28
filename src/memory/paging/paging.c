@@ -11,39 +11,49 @@ void paging_load_dir(uint32_t *dir);
 struct paging_4gb_chunk* paging_new_4gb(uint8_t flags)
 {
     uint32_t offset = 0;
-    uint32_t* dir = kernel_zero_alloc(sizeof(uint32_t) * PAGING_TOTAL_ENTRIES_PER_DIRECTORY);
+    uint32_t *dir = kernel_zero_alloc(sizeof(uint32_t) * PAGING_TOTAL_ENTRIES_PER_DIRECTORY);
     if (dir == NULL)
     {
         return NULL;
     }
     for (uint32_t i = 0; i < PAGING_TOTAL_ENTRIES_PER_DIRECTORY; i++)
     {
-        uint32_t *table_entry = kernel_zero_alloc(sizeof(uint32_t) * PAGING_TOTAL_ENTRIES_PER_TABLE);
-        if (table_entry == NULL)
+        uint32_t entry = 0;
+        if (offset < MYOS_MEMORY_BOUNDARY)
         {
-            return NULL;
-        }
-        for(uint32_t j = 0; j < PAGING_TOTAL_ENTRIES_PER_TABLE; j++)
-        {
-            uint32_t current_offset = offset + (j * PAGING_PAGE_SIZE_BYTES);
-            uint32_t final_flags = flags;
-            if (current_offset < MYOS_MEMORY_BOUNDARY)
+            uint32_t *table_entry = kernel_zero_alloc(sizeof(uint32_t) * PAGING_TOTAL_ENTRIES_PER_TABLE);
+            if (table_entry == NULL)
             {
-                // Force bit 2 (User/Supervisor) to 0 for kernel zone
-                final_flags &= ~PAGING_USER_ACCESS;
+                return NULL;
             }
-            table_entry[j] = current_offset | final_flags;
+            for (uint32_t j = 0; j < PAGING_TOTAL_ENTRIES_PER_TABLE; j++)
+            {
+                uint32_t current_offset = offset + (j * PAGING_PAGE_SIZE_BYTES);
+                uint32_t final_flags = flags;
+                if (current_offset < MYOS_MEMORY_BOUNDARY)
+                {
+                    // Force bit 2 (User/Supervisor) to 0 for kernel zone
+                    final_flags &= ~PAGING_USER_ACCESS;
+                }
+                table_entry[j] = current_offset | final_flags;
+            }
+            uint32_t directory_flags = flags | PAGING_WRITEABLE;
+            if (offset < MYOS_MEMORY_BOUNDARY)
+            {
+                directory_flags &= ~PAGING_USER_ACCESS;
+            }
+            entry = (uint32_t)table_entry | directory_flags;
         }
-        offset += PAGING_TOTAL_ENTRIES_PER_TABLE * PAGING_PAGE_SIZE_BYTES;
-        
-        uint32_t directory_flags = flags | PAGING_WRITEABLE;
-        if (i * (PAGING_TOTAL_ENTRIES_PER_TABLE * PAGING_PAGE_SIZE_BYTES) < MYOS_MEMORY_BOUNDARY)
+        else
         {
-            directory_flags &= ~PAGING_USER_ACCESS;
+            // for user space
+            entry = 0;
         }
-        dir[i] = (uint32_t)table_entry | directory_flags;
+
+        dir[i] = entry;
+        offset += PAGING_TOTAL_ENTRIES_PER_TABLE * PAGING_PAGE_SIZE_BYTES;
     }
-    paging_4gb_chunk_t* chunk_4gb = kernel_zero_alloc(sizeof(paging_4gb_chunk_t));
+    paging_4gb_chunk_t *chunk_4gb = kernel_zero_alloc(sizeof(paging_4gb_chunk_t));
     if (chunk_4gb == NULL)
     {
         return NULL;
@@ -76,7 +86,7 @@ int get_paging_indexes(void *virtual_addr, uint32_t *dir_index, uint32_t *table_
     if (!is_paging_aligned(virtual_addr) || dir_index == NULL || table_index == NULL)
     {
         res = -MYOS_INVALID_ARG;
-        goto out; 
+        goto out;
     }
 
     *dir_index = ((uint32_t)virtual_addr / (PAGING_TOTAL_ENTRIES_PER_DIRECTORY * PAGING_PAGE_SIZE_BYTES));
@@ -115,7 +125,7 @@ void* paging_align_address(void* ptr)
     {
         return (void*)((uint32_t)ptr + PAGING_PAGE_SIZE_BYTES - ((uint32_t)ptr % PAGING_PAGE_SIZE_BYTES));
     }
-    
+
     return ptr;
 }
 
@@ -134,7 +144,18 @@ int paging_set(uint32_t *dir, void *virtual_addr, uint32_t val)
         return res;
     }
     uint32_t dir_entry = dir[dir_index];
-    uint32_t *table = (uint32_t*)(dir_entry & 0xFFFFF000);
+    if ((dir_entry & PAGING_PRESENT) == 0) // Check if page table is missing
+    {
+        uint32_t *new_table = kernel_zero_alloc(sizeof(uint32_t) * PAGING_TOTAL_ENTRIES_PER_TABLE);
+        if (new_table == NULL)
+        {
+            return -MYOS_IO_ERROR; // Out of memory
+        }
+
+        dir[dir_index] = (uint32_t)new_table | PAGING_PRESENT | PAGING_WRITEABLE | PAGING_USER_ACCESS;
+        dir_entry = dir[dir_index];
+    }
+    uint32_t *table = (uint32_t *)(dir_entry & 0xFFFFF000);
     table[table_index] = val;
 
     return 0;
@@ -147,16 +168,12 @@ int paging_map(paging_4gb_chunk_t* directory, void* virt, void* phys, int flags)
     {
         return -MYOS_INVALID_ARG;
     }
-    
-    // Physical address doesn't strictly need to be aligned for the mapping logic 
-    // itself as long as we only use the page-aligned part for the entry.
+    //하위비트 제거하면 페이지 정렬된 주소가 됨 왜? 4096바이트 단위로 정렬
     uint32_t phys_addr = (uint32_t)phys & 0xFFFFF000;
-    
     return paging_set(directory->directory_entry, virt, phys_addr | flags);
 }
 
-int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys,
-                     int count, int flags)
+int paging_map_range(paging_4gb_chunk_t* directory, void* virt, void* phys,int count, int flags)
 {
     int res = 0;
     for (int i = 0; i < count; i++)
@@ -181,7 +198,9 @@ int paging_map_to(paging_4gb_chunk_t *directory, void *virt, void *phys, void *p
     if (check_page_alignment(virt) ||
         check_page_alignment(phys) ||
         check_page_alignment(phys_end))
+    {
         return -MYOS_INVALID_ARG;
+    }
 
     if ((uint32_t)phys_end < (uint32_t)phys)
     {
