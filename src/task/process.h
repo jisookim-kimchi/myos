@@ -32,6 +32,8 @@ struct process
     struct keyboard keyboard;
     uint16_t parent_id;
     int exit_code;
+
+    void* entry_point; //ELF header entry point
 };
 
 int process_map_binary(struct process *proc);
