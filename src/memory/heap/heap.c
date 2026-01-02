@@ -96,7 +96,7 @@ int heap_get_start_block(heap_t *heap, uint32_t total_blocks)
             break;
         }
     }
-    if (bs == -1)
+    if (bc < total_blocks)
     {
         return -MYOS_ERROR_NO_MEMORY;
     }

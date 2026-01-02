@@ -20,6 +20,7 @@ void print(const char *str);
 void init_terminal();
 void terminal_write_char(char c, uint8_t color);
 void print_int(int v);
+void print_hex(uint32_t n);
 void panic(const char *msg);
 void change_to_kernel_page(void);
 struct paging_4gb_chunk *paging_get_kernel_chunk(void);

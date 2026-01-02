@@ -123,6 +123,18 @@ void print_int(int v) {
   print(buf);
 }
 
+void print_hex(uint32_t n) {
+  char hex_chars[] = "0123456789ABCDEF";
+  char buf[11];
+  buf[0] = '0';
+  buf[1] = 'x';
+  for (int i = 7; i >= 0; i--) {
+    buf[i + 2] = hex_chars[(n >> (i * 4)) & 0xF];
+  }
+  buf[10] = '\0';
+  print(buf);
+}
+
 void change_to_kernel_page(void) {
   kernel_registers();
   paging_switch(kernel_chunk);
@@ -184,12 +196,13 @@ void kernel_main()
   disk_search_and_init();
 
   // --- FAT16 Write Test ---
-  print("Testing FAT16 Write...\n");
   int fd = fopen("0:/test2.txt", "w");
-  if (fd <= 0) {
+  if (fd <= 0)
+  {
     print("Failed to open file for writing\n");
-  } else {
-    print("File opened. Writing data...\n");
+  }
+  else
+  {
     char *data = "Hello world!\n";
     int written = fwrite(data, 1, ft_strlen(data), fd);
     print("Written bytes: ");
@@ -230,7 +243,8 @@ void kernel_main()
 
   struct process *process = 0;
   int res = process_load("0:/shell.bin", &process);
-  if (res < 0) {
+  if (res < 0)
+  {
     panic("process_load failed!\n");
   }
 

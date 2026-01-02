@@ -156,3 +156,24 @@ void *sys_call8_fwrite(struct interrupt_frame *frame)
   kernel_free(kernel_buf);
   return (void *)(uintptr_t)res;
 }
+
+void *sys_call9_fstat(struct interrupt_frame *frame)
+{
+  struct task *t = get_cur_task();
+  if (!t)
+  {
+    return (void *)(uintptr_t)-1;
+  }
+
+  int fd = (int)(uintptr_t)task_get_stack_item(t, 1);
+  void *stat_user_ptr = task_get_stack_item(t, 2);
+
+  struct file_stat stat;
+  int res = fstat(fd, &stat);
+  if (res == 0)
+  {
+    copy_to_task(t, &stat, stat_user_ptr, sizeof(stat));
+  }
+
+  return (void *)(uintptr_t)res;
+}

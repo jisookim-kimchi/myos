@@ -3,6 +3,8 @@
 #include "io.h"
 #include "user_heap.h"
 
+#include "process.h"
+
 void isr80h_register_command_call()
 {
   isr80h_register_command(SYSTEM_COMMAND1_PRINT, sys_call1_print);
@@ -12,5 +14,9 @@ void isr80h_register_command_call()
   isr80h_register_command(SYSTEM_COMMAND5_READ, sys_call5_fread);
   isr80h_register_command(SYSTEM_COMMAND6_SBRK, sys_call6_sbrk);
   isr80h_register_command(SYSTEM_COMMAND7_CLOSE, sys_call7_fclose);
-  isr80h_register_command(SYSTEM_COMMAND8_WRITE, sys_call8_fwrite);
+  isr80h_register_command(SYSTEM_COMMAND_WRITE, sys_call8_fwrite);
+  isr80h_register_command(SYSTEM_COMMAND_EXIT, sys_process_exit);
+  isr80h_register_command(SYSTEM_COMMAND_WAIT, sys_process_wait);
+  isr80h_register_command(SYSTEM_COMMAND_EXEC, sys_process_exec);
+  isr80h_register_command(SYSTEM_COMMAND_FSTAT, sys_call9_fstat);
 }

@@ -4,6 +4,7 @@
 #include "../string/string.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../kernel.h"
+#include "task.h"
 
 // The current process that is running
 struct process* cur_process = NULL;
@@ -13,11 +14,9 @@ static struct process* processes[MYOS_MAX_PROCESSES] = {};
 static void process_init(struct process* process)
 {
     ft_memset(process, 0, sizeof(struct process));
-    // Keyboard buffer is zeroed by the memset above,
-    // explicitly ensuring head/tail are 0 is redundant but safe.
-    ft_memset(process->keyboard.key_buffer, 0, sizeof(process->keyboard.key_buffer));
-    process->keyboard.head = 0;
-    process->keyboard.tail = 0;
+    
+    process->parent_id = -1; // No parent
+    process->exit_code = 0;  // Default exit code
 }
 
 struct process* get_cur_process()
@@ -149,7 +148,27 @@ int process_map_binary(struct process *proc)
     }
 
     process_init(proc);
-    int res = process_load_data(filename, proc);
+    if (get_cur_process())
+    {
+        proc->parent_id = get_cur_process()->id;
+    }
+    
+    print("Kernel: Created Process PID ");
+    print_int(pid);
+    print(" Parent PID ");
+    print_int(proc->parent_id);
+    print("\n");
+
+    // Extract actual filename for loading binary (ignore arguments)
+    char binary_name[1024];
+    ft_strlcpy(binary_name, filename, sizeof(binary_name));
+    char* first_space = ft_strchr(binary_name, ' ');
+    if (first_space)
+    {
+        *first_space = '\0';
+    }
+
+    int res = process_load_data(binary_name, proc);
     if (res < 0)
     {
         task_delete(t);
@@ -157,7 +176,7 @@ int process_map_binary(struct process *proc)
         kernel_free(proc);
         return res;
     }
-    ft_strlcpy(proc->filename, filename, sizeof(proc->filename));
+    ft_strlcpy(proc->filename, binary_name, sizeof(proc->filename));
     proc->id   = pid;
     proc->task = t;
     proc->stack = stack_ptr;
@@ -178,6 +197,9 @@ int process_map_binary(struct process *proc)
         kernel_free(proc);
         return rc;               
     }
+
+    process_setup_arguments(proc, filename);
+
     processes[pid] = proc;
     *process = proc;
     return 0;
@@ -234,4 +256,217 @@ int process_load(const char *filename, struct process **process)
     }
 
     return process_load_for_slot(filename, process, process_slot);
+}
+
+int process_exit(int exit_code) 
+{
+    struct process *p = get_cur_process();
+    if (!p)
+    {
+        return -MYOS_INVALID_ARG;
+    }
+
+    p->exit_code = exit_code;
+    for (int i = 0; i < MYOS_MAX_FILE_DESCRIPTORS; i++)
+    {
+        if (p->allocations[i])
+        {
+            kernel_free(p->allocations[i]);
+            p->allocations[i] = NULL;
+        }
+    }
+    p->task->state = TASK_ZOMBIE;
+    if (p->parent_id >= 0)
+    {
+        struct process *parent = get_process(p->parent_id);
+        if (parent && parent->task)
+        {
+            //because parent is waiting for child to exit
+            task_wakeup(parent);
+        }
+    }
+    struct task *next_task = get_next_task();
+    if (next_task)
+    {
+        task_switch(next_task);
+        task_return(&next_task->regs);
+    }
+
+    // Should not be reached if task switch successful
+    while (1)
+    {
+        enable_interrupts();
+        halt();
+    }    
+}
+
+int process_wait(int* status)
+{
+    struct process* current = get_cur_process();
+
+    while(1)
+    {
+        int have_children = 0;
+        for (int i = 0; i < MYOS_MAX_PROCESSES; i++)
+        {
+            struct process* proc = processes[i];
+            if (!proc)
+            {
+                continue;
+            }
+
+            if (proc->parent_id == current->id)
+            {
+                have_children = 1;
+                if (proc->task->state == TASK_ZOMBIE)
+                {
+                    if (status)
+                    {
+                        *status = proc->exit_code;
+                    }
+                    int pid = proc->id;
+
+                    task_delete(proc->task);
+                    kernel_free(proc->stack);
+                    kernel_free(proc);
+                    processes[i] = NULL;
+                    
+                    return pid;
+                }
+            }
+        }
+
+        if (!have_children)
+        {
+            return -MYOS_INVALID_ARG;
+        }
+
+        task_block(current);
+    }
+}
+
+
+/*
+    handle argc, argv
+*/
+
+char* get_token(const char* command_line, int index)
+{
+    int count = 0;
+    const char* start = NULL;
+    bool in_arg = false;
+
+    for (int i = 0; command_line[i] != '\0'; i++)
+    {
+        if (command_line[i] == ' ')
+        {
+            if (in_arg && count - 1 == index)
+            {
+                // We found the end of the token we wanted
+                int len = &command_line[i] - start;
+                char* token = kernel_malloc(len + 1);
+                ft_strlcpy(token, start, len + 1);
+                return token;
+            }
+            in_arg = false;
+        }
+        else if (!in_arg)
+        {
+            if (count == index)
+            {
+                start = &command_line[i];
+            }
+            count++;
+            in_arg = true;
+        }
+    }
+
+    // Handle last token if it didn't end with space
+    if (in_arg && count - 1 == index)
+    {
+        int len = ft_strlen(start);
+        char* token = kernel_malloc(len + 1);
+        ft_strcpy(token, start);
+        return token;
+    }
+
+    return NULL;
+}
+
+int process_count_args(const char* command_line)
+{
+    int count = 0;
+    bool in_arg = false;
+
+    for (int i = 0; command_line[i] != '\0'; i++)
+    {
+        if (command_line[i] == ' ')
+        {
+            in_arg = false;
+        }
+        else if (!in_arg)
+        {
+            count++;
+            in_arg = true;
+        }
+    }
+    return count;
+}
+
+//현재 커널버퍼에 이미 command_line이 복사되어있으니까.... execve에서 이미 복사했음.
+void process_setup_arguments(struct process* process, const char* command_line)
+{
+    int argc = process_count_args(command_line);
+    if (argc == 0)
+        return;
+        
+    uint32_t virtual_stack_ptr = MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_START;
+    uint32_t arg_vaddrs[64];
+
+    // copy arguments to the top of the user stack
+    for (int i = argc - 1; i >= 0; i--)
+    {
+        char *arg = get_token(command_line, i);
+        if (!arg)
+            continue;
+        
+        int arg_len = ft_strlen(arg) + 1;
+        virtual_stack_ptr -= arg_len;
+        /*
+        copy_to_task 커널에서 유저영역으로 복사해야함.
+        prco->task는 shell은부모 여기서 prco->task는 walter.bin이겟지
+        호출하는순간 커널이 cr3 레지스터의 값을 자식의 지도로 스위치
+        이제 cpu는 자식의 지도를 보고 물건을 배달하지.
+        배달이 끄탄면 원래 부모의 것으로 cr3를 스위치.
+        */
+        copy_to_task(process->task, arg, (void*)virtual_stack_ptr, arg_len);
+        arg_vaddrs[i] = virtual_stack_ptr;
+        kernel_free(arg);
+    }
+    
+    // align stack to 4 bytes
+    virtual_stack_ptr &= ~0x03;
+
+    // allocate space for argv array (pointers + NULL terminator)
+    virtual_stack_ptr -= (sizeof(uint32_t) * (argc + 1)); 
+    uint32_t argv_base = virtual_stack_ptr; 
+    
+    // copy the pointers to user stack
+    for (int i = 0; i < argc; i ++)
+    {
+        copy_to_task(process->task, &arg_vaddrs[i], (void*)argv_base + (i * 4), 4);
+    }
+    
+    // add NULL terminator to argv array
+    uint32_t null_ptr = 0;
+    copy_to_task(process->task, &null_ptr, (void*)argv_base + (argc * 4), 4);
+
+    // push argv and argc for main(int argc, char** argv)
+    virtual_stack_ptr -= 4;
+    copy_to_task(process->task, &argv_base, (void*)virtual_stack_ptr, 4);
+    virtual_stack_ptr -= 4;
+    copy_to_task(process->task, &argc, (void*)virtual_stack_ptr, 4);
+
+    // set ESP to point to argc
+    process->task->regs.esp = virtual_stack_ptr;
 }

@@ -17,5 +17,6 @@ int strnlen_terminator(const char *str, int max, char terminator);
 int ft_istrncmp(const char *s1, const char *s2, int n);
 char ft_tolower(char s1);
 void ft_itoa(int n, char s[]);
+char *ft_strchr(const char *s, int c);
 
 #endif

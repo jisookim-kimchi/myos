@@ -11,12 +11,27 @@ void keyboard_init()
     // Process creation will handle initialization
 }
 
+// 0x2A: Left Shift, 0x36: Right Shift
+#define KEY_LEFT_SHIFT 0x2A
+#define KEY_RIGHT_SHIFT 0x36
+
+static int shift_held = 0;
+
 static char scancode_to_ascii[] = 
 {
     0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
     '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
     0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0,
     '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*',
+    0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+static char scancode_to_ascii_shift[] = 
+{
+    0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
+    0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '\"', '~', 0,
+    '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, '*',
     0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -69,6 +84,18 @@ void keyboard_handle_interrupt()
 {
     uint8_t scancode = insb(0x60); 
     
+    if (scancode == KEY_LEFT_SHIFT || scancode == KEY_RIGHT_SHIFT)
+    {
+        shift_held = 1;
+        return;
+    }
+    
+    if (scancode == (KEY_LEFT_SHIFT | 0x80) || scancode == (KEY_RIGHT_SHIFT | 0x80))
+    {
+        shift_held = 0;
+        return;
+    }
+
     if (scancode & 0x80)
     {
         return;
@@ -76,7 +103,16 @@ void keyboard_handle_interrupt()
 
     if (scancode < sizeof(scancode_to_ascii))
     {
-        char c = scancode_to_ascii[scancode];
+        char c = 0;
+        if (shift_held)
+        {
+            c = scancode_to_ascii_shift[scancode];
+        }
+        else
+        {
+            c = scancode_to_ascii[scancode];
+        }
+
         if (c != 0)
         {
             keyboard_push(c);

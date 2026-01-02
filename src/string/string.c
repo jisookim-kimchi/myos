@@ -155,6 +155,17 @@ char ft_tolower(char s1)
     return s1;
 }
 
+char* ft_strchr(const char* s, int c)
+{
+    while (*s != (char)c)
+    {
+        if (!*s)
+            return 0;
+        s++;
+    }
+    return (char*)s;
+}
+
 
 void ft_itoa(int n, char s[])
 {

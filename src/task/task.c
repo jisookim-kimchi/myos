@@ -16,13 +16,14 @@ int init_task(struct task *task, struct process *proc)
 {
   ft_memset(task, 0, sizeof(struct task));
 
-  // Fix: Add PAGING_WRITEABLE so kernel can write to stack after switching CR3
+  // add paging_writeable so kernel can write to stack after switching CR3
   task->page_directory =
       paging_new_4gb(PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
   if (!task->page_directory)
   {
     return -MYOS_ERROR_NO_MEMORY;
   }
+  task->priority = TASK_PRIORITY_MEDIUM;
   task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
   task->regs.ss = MYOS_USER_DATA_SEGMENT;
   task->regs.cs = MYOS_USER_CODE_SEGMENT;
@@ -71,9 +72,9 @@ struct task *new_task(struct process *proc)
   if (task_cur == NULL)
   {
     task_cur = task;
-    print("Kernel: new_task: task_cur set to ");
-    print_int((uint32_t)(uintptr_t)task_cur);
-    print("\n");
+    //print("Kernel: new_task: task_cur set to ");
+    //print_int((uint32_t)(uintptr_t)task_cur);
+    //print("\n");
   }
   return task;
 }
@@ -91,18 +92,44 @@ struct task *get_next_task()
   if (!t)
     t = task_head;
   struct task *start_task = t;
+
   while (1)
   {
-    if (t->state == TASK_RUNNING)
-    {
-      return t;
-    }
-    t = t->next;
-    if (!t)
-      t = task_head;
-    if (t == start_task)
-      break;
+      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_HIGH)
+      {
+          return t;
+      }
+      t = t->next;
+      if (!t) t = task_head;
+      if (t == start_task) break;
   }
+
+  t = start_task;
+
+  while (1)
+  {
+      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_MEDIUM)
+      {
+          return t;
+      }
+      t = t->next;
+      if (!t) t = task_head;
+      if (t == start_task) break;
+  }
+
+  t = start_task;
+
+  while (1)
+  {
+      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_LOW)
+      {
+          return t;
+      }
+      t = t->next;
+      if (!t) t = task_head;
+      if (t == start_task) break;
+  }
+
   return task_cur;
 }
 
@@ -110,15 +137,29 @@ void task_block(void *event_wait_channel)
 {
   task_cur->state = TASK_BLOCKED;
   task_cur->event_wait_channel = event_wait_channel;
-  struct task *next_task = get_next_task();
-  if (next_task != task_cur)
+  
+  // 타이머 인터럽트 발생
+  // 인터럽트 핸들러가 현재 상태(레지스터)를 싹 저장하고
+  // 다음 태스크의 레지스터를 불러와서 완벽하게 교체
+  while (task_cur->state == TASK_BLOCKED)
   {
-    task_switch(next_task);
+      enable_interrupts();
+      halt();
   }
-  else
+}
+
+void task_sleep_until(int wait_ticks)
+{
+  task_cur->sleep_expiry = get_tick() + wait_ticks;
+  task_cur->state = TASK_BLOCKED;
+  
+  // 타이머 인터럽트 발생
+  // 인터럽트 핸들러가 현재 상태(레지스터)를 싹 저장하고
+  // 다음 태스크의 레지스터를 불러와서 완벽하게 교체
+  while (task_cur->state == TASK_BLOCKED)
   {
-    enable_interrupts();
-    halt();
+      enable_interrupts();
+      halt();
   }
 }
 
@@ -166,36 +207,35 @@ int task_page()
   return 0;
 }
 
-// Index 0 is the return address. Index 1 is arg1, Index 2 is the second arg,
-// and so on. Since data is stacked on ESP, we use the index to access a
+// index 0 is return address. index 1 is arg1, index 2 is the second arg,
+// and so on. since data is stacked on esp, we use the index to access a
 // specific value.
 
 void *task_get_stack_item(struct task *task, int index)
 {
   void *result = 0;
 
-  // Calculate virtual address of item on user stack
+  // calculate virtual address of item on user stack
   uint32_t virtual_addr = task->regs.esp + (index * sizeof(uint32_t));
 
-  // Security Check: Ensure the stack item is within the user zone (>= 256MB)
+  // check : stack item is within the user zone (>= 256MB)
   if (virtual_addr < MYOS_MEMORY_BOUNDARY)
   {
       return NULL;
   }
 
-  // Paging_get requires ALIGNED address, otherwise it returns error/index 0
+  // paging_get requires aligned address, otherwise it returns error/index 0
   uint32_t aligned_virtual_addr = virtual_addr & 0xFFFFF000;
   uint32_t offset = virtual_addr & 0xFFF;
 
-  // Get the physical address using the task's page directory
+  // get the physical address using the task's page directory
   uint32_t entry = paging_get(task->page_directory->directory_entry, (void *)aligned_virtual_addr);
 
-  // Extract physical page address (mask out flags)
+  // extract physical page address (mask out flags)
   uint32_t phys_page = entry & 0xFFFFF000;
   uint32_t phys_addr = phys_page + offset;
 
-  // Since Kernel Identity Maps all memory, we can access Physical Address
-  // directly
+  // since kernel identity maps all memory, we can access physical address directly
   result = (void *)(*(uint32_t *)phys_addr);
 
   return result;
@@ -216,6 +256,7 @@ void task_run_first_ever_task()
 }
 
 // save registers
+// frame represents the user state saved in the kernel stack by the interrupt handler
 void save_registers(struct interrupt_frame *frame)
 {
   if (!get_cur_task())
@@ -252,7 +293,7 @@ int copy_string_from_task(struct task *task, void *virtual, void *phys, int max)
   if (max <= 0 || !virtual || !phys)
     return -MYOS_INVALID_ARG;
 
-  // Security Check: Ensure the virtual address is within the user zone (>= 256MB)
+  //check : virtual address is within the user zone (>= 256MB)
   if ((uint32_t)virtual < MYOS_MEMORY_BOUNDARY)
   {
       return -MYOS_INVALID_ARG;
@@ -266,12 +307,13 @@ int copy_string_from_task(struct task *task, void *virtual, void *phys, int max)
   return 0;
 }
 
+//kernel -> user
 int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size)
 {
   if (size <= 0 || !kernel_buf || !user_buf)
     return -MYOS_INVALID_ARG;
 
-  // Security Check: Ensure the virtual address and the end of the buffer are within the user zone (>= 256MB)
+  //check : virtual address and the end of the buffer are within the user zone (>= 256MB)
   if ((uint32_t)user_buf < MYOS_MEMORY_BOUNDARY || ((uint32_t)user_buf + size) < MYOS_MEMORY_BOUNDARY)
   {
       return -MYOS_INVALID_ARG;
@@ -289,7 +331,7 @@ int copy_from_task(struct task *task, void *user_buf, void *kernel_buf, int size
   if (size <= 0 || !kernel_buf || !user_buf)
     return -MYOS_INVALID_ARG;
 
-  // Security Check: Ensure the virtual address and the end of the buffer are within the user zone (>= 256MB)
+  //check : virtual address and the end of the buffer are within the user zone (>= 256MB)
   if ((uint32_t)user_buf < MYOS_MEMORY_BOUNDARY || ((uint32_t)user_buf + size) < MYOS_MEMORY_BOUNDARY)
   {
       return -MYOS_INVALID_ARG;
@@ -319,35 +361,18 @@ void task_wakeup(void *event_wait_channel)
   }
 }
 
-void task_sleep_until(int wait_ticks)
-{
-  task_cur->sleep_expiry = get_tick() + wait_ticks;
-  task_cur->state = TASK_BLOCKED;
-  struct task *next = get_next_task();
-  // 나 자신이면? (세상에 나뿐) -> 쉴 틈 없이 바로 리턴됨
-  if (next == task_cur)
-  {
-    // 타이머가 깨워줄 때까지 여기서 무한 대기 (Busy Wait 아님, Halt Wait)
-    while (task_cur->state == TASK_BLOCKED)
-    {
-      enable_interrupts();
-      halt();
-    }
-  }
-  else
-  {
-    task_switch(next);
-  }
-}
+
 
 void task_run_scheduled_tasks(uint32_t cur_tick)
 {
   struct task *task = task_head;
   if (!task)
     return;
+
   while (task)
   {
-    if (task->state == TASK_BLOCKED && task->sleep_expiry > 0 &&
+    if (task->state == TASK_BLOCKED &&
+        task->sleep_expiry > 0 &&
         cur_tick >= task->sleep_expiry)
     {
       task->state = TASK_RUNNING;

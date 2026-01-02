@@ -4,10 +4,15 @@
 #include <stdint.h>
 #include "../config.h"
 #include "../memory/paging/paging.h"
-#include "../idt/idt.h"
-
+struct process;
 struct interrupt_frame;
 
+enum
+{
+    TASK_PRIORITY_HIGH,
+    TASK_PRIORITY_MEDIUM,
+    TASK_PRIORITY_LOW,
+};
 enum task_state
 {
     TASK_RUNNING,
@@ -46,6 +51,8 @@ struct task
     int state;
     void *event_wait_channel;
     uint32_t sleep_expiry;
+    int priority;
+    int ticks_usage;
 };
 
 int init_task(struct task* task, struct process* process);

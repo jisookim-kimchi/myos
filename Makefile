@@ -12,18 +12,20 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/tss.asm.o \
 		$(BUILD_DIR)/task/task.o \
 		$(BUILD_DIR)/task/process.o \
+		$(BUILD_DIR)/isr80h/process.o \
 		$(BUILD_DIR)/task/task.asm.o \
 		$(BUILD_DIR)/isr80h/isr80h.o \
 		$(BUILD_DIR)/isr80h/user_heap.o \
 		$(BUILD_DIR)/isr80h/io.o \
 		$(BUILD_DIR)/keyboard/keyboard.o \
 		$(BUILD_DIR)/timer/timer.o \
-		$(BUILD_DIR)/lock/lock.asm.o
+		$(BUILD_DIR)/lock/lock.asm.o \
+
 
 INCLUDES = -I$(SRC_DIR)/
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 	
-.PHONY: all clean
+.PHONY: all clean disk
 
 all: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin $(BIN_DIR)/myos.bin programs
 
@@ -36,6 +38,10 @@ $(BIN_DIR)/myos.bin: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin programs
 	sudo cp ./test.txt /mnt/d
 	sudo cp ./src/programs/blank/blank.bin /mnt/d
 	sudo cp ./src/programs/shell/shell.bin /mnt/d
+	sudo cp ./src/programs/waiter/waiter.bin /mnt/d
+	sudo cp ./src/programs/bf/bf.bin /mnt/d
+	sudo cp ./hello.bf /mnt/d
+	sudo cp ./simple.bf /mnt/d
 	sudo umount /mnt/d
 
 $(BIN_DIR)/kernel.bin: $(FILES)
@@ -66,10 +72,14 @@ $(BUILD_DIR)/timer/timer.o: $(SRC_DIR)/timer/timer.c
 programs:
 	cd ./src/programs/blank && $(MAKE) all
 	cd ./src/programs/shell && $(MAKE) all
+	cd ./src/programs/waiter && $(MAKE) all
+	cd ./src/programs/bf && $(MAKE) all
 
 programs_clean:
 	cd ./src/programs/blank && $(MAKE) clean
 	cd ./src/programs/shell && $(MAKE) clean
+	cd ./src/programs/waiter && $(MAKE) clean
+	cd ./src/programs/bf && $(MAKE) clean
 
 clean: programs_clean
 	rm -rf $(BIN_DIR)/*

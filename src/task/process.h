@@ -30,6 +30,8 @@ struct process
     void* bin_end_addr;
 
     struct keyboard keyboard;
+    uint16_t parent_id;
+    int exit_code;
 };
 
 int process_map_binary(struct process *proc);
@@ -41,4 +43,7 @@ struct process* get_cur_process();
 void set_cur_process(struct process* process);
 void* process_sbrk(struct process* proc, int increment);
 int process_load(const char *filename, struct process **process);
+int process_exit(int exit_code);
+int process_wait(int* status);
+void process_setup_arguments(struct process* process, const char* command_line);
 #endif

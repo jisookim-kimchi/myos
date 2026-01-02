@@ -33,7 +33,7 @@ int main()
   int fd = fopen("0:/test.txt", "w");
   if (fd < 0)
   {
-      print("Error for writing\n");
+      print("error for writing\n");
   }
   else
   {
@@ -51,34 +51,94 @@ int main()
           if (res > 0)
           {
               buf[res] = '\0';
-              print("Read: ");
+              print("read: ");
               print(buf);
               print("\n");
           }
           else
           {
-              print("Read failed\n");
+              print("read failed\n");
           }
           fclose(fd);
       }
       else
       {
-          print("Failed to open file\n");
+          print("failed open file\n");
       }
   }
+  char cmd[256];
+  int idx = 0;
+  
   print("MYOS>> ");
   while (1)
   {
     char c = getkey();
     if (c == '\n')
     {
-      print("\nMYOS>> ");
+      print("\n");
+      cmd[idx] = 0;
+      
+      if (idx > 0) 
+      {
+          // Simple command parser
+          if (cmd[0] == 'r' && cmd[1] == 'u' && cmd[2] == 'n' && cmd[3] == ' ') 
+          {
+               // run filename
+               char* filename = &cmd[4];
+               int pid = exec(filename);
+               if (pid < 0) 
+               {
+                   print("failed run process\n");
+               }
+               else
+               {
+                   print("process started with PID \n");
+                   itoa(pid, cmd); // reuse cmd buffer for itoa
+                   print(cmd);
+                   print("waiting for exit...\n");
+                   
+                   int status = 0;
+                   int waited_pid = wait_pid(&status);
+                   
+                   print("process finished: PID ");
+                   itoa(waited_pid, cmd);
+                   print(cmd);
+                   print("status");
+                   itoa(status, cmd);
+                   print(cmd);
+                   print("\n");
+               }
+          }
+          else if (cmd[0] == 'q')
+          {
+              break;
+          }
+          else
+          {
+              print("unknow command\n");
+          }
+      }
+
+      idx = 0;
+      print("MYOS>> ");
       continue;
     }
-    putchar(c);
-    if (c == 'q')
+    
+    // Echo and buffer
+    if (c == 8) // Backspace
     {
-      break;
+        if (idx > 0)
+        {
+            idx--;
+            putchar(c);
+        }
+        continue;
+    }
+
+    putchar(c);
+    if (idx < 255)
+    {
+        cmd[idx++] = c;
     }
   }
   return 0;

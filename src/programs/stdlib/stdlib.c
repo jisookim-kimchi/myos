@@ -41,7 +41,7 @@ void itoa(int n, char s[])
 void print_hex(uint32_t n)
 {
     char hex_chars[] = "0123456789ABCDEF";
-    char buf[11]; // 0x + 8 chars + null
+    char buf[11];
     buf[0] = '0';
     buf[1] = 'x';
     for (int i = 7; i >= 0; i--)

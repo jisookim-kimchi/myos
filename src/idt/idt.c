@@ -9,6 +9,8 @@
 #include "../timer/timer.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../memory/paging/paging.h"
+#include "../task/process.h"
+#include "../task/task.h"
 
 struct idt_descriptor idt_desc[MYOS_TOTAL_INTERRUPTS];
 static INTERRUPT_CALLBACK_FUNCTION interrupt_callbacks[MYOS_TOTAL_INTERRUPTS];
@@ -50,19 +52,35 @@ void idt_zero()
 
 void page_fault_handler(struct interrupt_frame* frame)
 {
-    uint32_t faulting_address;
-    faulting_address = get_faulting_address();
+    uint32_t faulting_address = get_faulting_address();
+    struct process* proc = get_cur_process();
+
+    // safety: only map addresses if they are within valid user ranges (program or stack)
+    // programmer's safety net: prevent lazy paging from exhausting RAM on infinite fault loops.
+    bool valid = (faulting_address >= MYOS_PROGRAM_VIRTUAL_ADDRESS && faulting_address < 0x20000000);
+    
+    if (!valid || !proc)
+    {
+        print("segmentation fault : ");
+        print_hex(faulting_address);
+        print(" IP: ");
+        print_hex(frame->ip);
+        print("\n");
+        // In a real OS, we'd kill the process. For now, panic helps debugging.
+        panic("segmentation fault (out of bounds access)");
+    }
+
     void* page = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
     if (!page)
     {
-        panic("OOM: Failed to allocate page for Lazy Paging");
+        panic("page_fault_handler() failed to allocate page");
     }
 
-    faulting_address &= 0xFFFFF000;
-    int res = paging_map(get_cur_task()->page_directory, (void*)faulting_address, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
+    uint32_t aligned_addr = faulting_address & 0xFFFFF000;
+    int res = paging_map(proc->task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
     if (res < 0)
     {
-        panic("Failed to map page for Lazy Paging");
+        panic("page_fault_handler() failed to map page");
     }
 }
 
@@ -111,12 +129,12 @@ void isr80h_register_command(int ask_id, ISR80_COMMAND command)
 {
     if (ask_id < 0 || ask_id >= MYOS_MAX_ISR80H_COMMANDS)
     {
-        panic("The command is out of bound\n");
+        panic("isr80h_register_command(): command is out of bounds\n");
     }
 
     if (isr80h_commands[ask_id])
     {
-        panic("Your attempting to overwrite an existing command\n");
+        panic("isr80h_register_command(): attempting to overwrite an existing command\n");
     }
     isr80h_commands[ask_id] = command;
 }
