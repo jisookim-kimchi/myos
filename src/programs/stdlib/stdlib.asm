@@ -14,6 +14,7 @@ global exit
 global wait_pid
 global exec
 global fstat
+global set_focus
 
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
@@ -80,6 +81,13 @@ wait_pid:
 
 exec:
     mov eax, SYSCALL_EXEC
+    int 0x80
+    ret
+
+%define SYSCALL_SET_FOCUS 13
+
+set_focus:
+    mov eax, SYSCALL_SET_FOCUS
     int 0x80
     ret
 

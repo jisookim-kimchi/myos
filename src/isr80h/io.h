@@ -11,4 +11,5 @@ void *sys_call6_sbrk(struct interrupt_frame *frame);
 void *sys_call7_fclose(struct interrupt_frame *frame);
 void *sys_call8_fwrite(struct interrupt_frame *frame);
 void *sys_call9_fstat(struct interrupt_frame *frame);
+void *sys_call_set_focus(struct interrupt_frame *frame);
 #endif

@@ -75,7 +75,6 @@ static int process_load_binary(const char *filename, struct process *proc)
     }
     fclose(fd);
     proc->ptr = program_data_ptr;
-    //ELF file size  : what is ELF? : 
     proc->size = stat.size;
     return 0;
 }
@@ -136,9 +135,9 @@ int process_map_binary(struct process *proc)
     }
 
     struct task *t = new_task(proc);
-    print("Kernel: process_load_for_slot: new_task returned ");
-    print_int((uint32_t)(uintptr_t)t);
-    print("\n");
+    // print("Kernel: process_load_for_slot: new_task returned ");
+    // print_int((uint32_t)(uintptr_t)t);
+    // print("\n");
 
     if (!t) 
     {
@@ -153,13 +152,12 @@ int process_map_binary(struct process *proc)
         proc->parent_id = get_cur_process()->id;
     }
     
-    print("Kernel: Created Process PID ");
-    print_int(pid);
-    print(" Parent PID ");
-    print_int(proc->parent_id);
-    print("\n");
+    // print("Kernel: Created Process PID ");
+    // print_int(pid);
+    // print(" Parent PID ");
+    // print_int(proc->parent_id);
+    // print("\n");
 
-    // Extract actual filename for loading binary (ignore arguments)
     char binary_name[1024];
     ft_strlcpy(binary_name, filename, sizeof(binary_name));
     char* first_space = ft_strchr(binary_name, ' ');
@@ -226,17 +224,14 @@ void *process_sbrk(struct process *proc, int amounts)
 
     if (amounts > 0) 
     {
-        // Check if we need to map new pages
         uint32_t diff = (uint32_t)paging_align_address((void *)new_break) - (uint32_t)paging_align_address(old_break);
         if (diff > 0) 
         {
-            // Allocate and map new pages
             for (uint32_t addr = (uint32_t)paging_align_address(old_break); addr < (uint32_t)paging_align_address((void *)new_break); addr += PAGING_PAGE_SIZE_BYTES) 
             {
                 void *phys = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
                 if (!phys) 
                 {
-                    // In a real OS, we'd roll back here. For now, just return error.
                     return (void *)-1;
                 }
                 paging_map_to(proc->task->page_directory, (void *)addr, phys, (void *)(addr + PAGING_PAGE_SIZE_BYTES), PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
@@ -291,8 +286,6 @@ int process_exit(int exit_code)
         task_switch(next_task);
         task_return(&next_task->regs);
     }
-
-    // Should not be reached if task switch successful
     while (1)
     {
         enable_interrupts();
@@ -362,7 +355,6 @@ char* get_token(const char* command_line, int index)
         {
             if (in_arg && count - 1 == index)
             {
-                // We found the end of the token we wanted
                 int len = &command_line[i] - start;
                 char* token = kernel_malloc(len + 1);
                 ft_strlcpy(token, start, len + 1);
@@ -380,8 +372,6 @@ char* get_token(const char* command_line, int index)
             in_arg = true;
         }
     }
-
-    // Handle last token if it didn't end with space
     if (in_arg && count - 1 == index)
     {
         int len = ft_strlen(start);

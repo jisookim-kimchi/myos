@@ -113,5 +113,6 @@ int main(int argc, char **argv)
   }
 
   free(code);
+  free(tape);
   return 0;
 }

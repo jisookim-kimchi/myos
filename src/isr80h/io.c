@@ -177,3 +177,22 @@ void *sys_call9_fstat(struct interrupt_frame *frame)
 
   return (void *)(uintptr_t)res;
 }
+
+void *sys_call_set_focus(struct interrupt_frame *frame)
+{
+  struct task *t = get_cur_task();
+  if (!t)
+  {
+    return (void *)(uintptr_t)-1;
+  }
+
+  int pid = (int)(uintptr_t)task_get_stack_item(t, 1);
+  struct process *process = get_process(pid);
+  if (!process)
+  {
+    return (void *)(uintptr_t)-1;
+  }
+
+  keyboard_set_focus(process);
+  return 0;
+}

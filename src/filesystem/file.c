@@ -172,6 +172,9 @@ int fopen(const char *filename, const char *mode)
   }
 
   void *fd_private_data = d->filesystem->open(d, root_path->first, filemode);
+  release_path_parts(root_path);
+  root_path = NULL;
+
   if (ISERR(fd_private_data))
   {
     res = ERROR_I(fd_private_data);
@@ -191,6 +194,10 @@ int fopen(const char *filename, const char *mode)
   res = desc->index;
 
 out:
+  if (root_path)
+  {
+    release_path_parts(root_path);
+  }
   spin_unlock(&filesystem_lock);
   return res;
 }

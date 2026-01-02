@@ -80,7 +80,6 @@ int main()
       
       if (idx > 0) 
       {
-          // Simple command parser
           if (cmd[0] == 'r' && cmd[1] == 'u' && cmd[2] == 'n' && cmd[3] == ' ') 
           {
                // run filename
@@ -92,6 +91,7 @@ int main()
                }
                else
                {
+                   set_focus(pid);
                    print("process started with PID \n");
                    itoa(pid, cmd); // reuse cmd buffer for itoa
                    print(cmd);
@@ -99,6 +99,7 @@ int main()
                    
                    int status = 0;
                    int waited_pid = wait_pid(&status);
+                   set_focus(0); // Assuming shell is PID 0
                    
                    print("process finished: PID ");
                    itoa(waited_pid, cmd);
@@ -109,8 +110,9 @@ int main()
                    print("\n");
                }
           }
-          else if (cmd[0] == 'q')
+          else if (cmd[0] == 'q' && cmd[1] == 'u' && cmd[2] == 'i' && cmd[3] == 't')
           {
+              print("quitting\n");
               break;
           }
           else

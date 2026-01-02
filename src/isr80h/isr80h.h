@@ -15,6 +15,7 @@ enum SystemCommands
   SYSTEM_COMMAND_WAIT,
   SYSTEM_COMMAND_EXEC,
   SYSTEM_COMMAND_FSTAT,
+  SYSTEM_COMMAND_SET_FOCUS,
 };
 
 void isr80h_register_command_call();

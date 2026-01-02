@@ -35,10 +35,24 @@ static char scancode_to_ascii_shift[] =
     0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+static struct process* focused_process = NULL;
+
+void keyboard_set_focus(struct process* process)
+{
+    focused_process = process;
+}
+
 //Circular Queue
 void keyboard_push(char c)
 {
-    struct process* process = get_cur_task()->process;
+    struct process* process = focused_process;
+    if (!process)
+    {
+        // Fallback to current task if no focus set
+        if (get_cur_task())
+            process = get_cur_task()->process;
+    }
+
     if (!process)
     {
         return;

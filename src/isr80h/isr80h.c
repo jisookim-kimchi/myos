@@ -19,4 +19,5 @@ void isr80h_register_command_call()
   isr80h_register_command(SYSTEM_COMMAND_WAIT, sys_process_wait);
   isr80h_register_command(SYSTEM_COMMAND_EXEC, sys_process_exec);
   isr80h_register_command(SYSTEM_COMMAND_FSTAT, sys_call9_fstat);
+  isr80h_register_command(SYSTEM_COMMAND_SET_FOCUS, sys_call_set_focus);
 }

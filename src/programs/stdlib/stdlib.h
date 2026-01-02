@@ -31,4 +31,5 @@ int fstat(int fd, struct file_stat *stat);
 void exit(int status);
 int wait_pid(int *status);
 int exec(const char *filename);
+void set_focus(int pid);
 #endif
