@@ -20,6 +20,9 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/keyboard/keyboard.o \
 		$(BUILD_DIR)/timer/timer.o \
 		$(BUILD_DIR)/lock/lock.asm.o \
+		$(BUILD_DIR)/task/elfloader.o \
+		$(BUILD_DIR)/task/elfloader_helper.o \
+		$(BUILD_DIR)/task/elf.o
 
 
 INCLUDES = -I$(SRC_DIR)/

@@ -5,6 +5,8 @@
 #include "../memory/heap/kernel_heap.h"
 #include "../kernel.h"
 #include "task.h"
+#include "elfloader.h"
+#include "elf.h"
 
 // The current process that is running
 struct process* cur_process = NULL;
@@ -81,9 +83,22 @@ static int process_load_binary(const char *filename, struct process *proc)
 
 int process_load_data(const char* filename, struct process* process)
 {
-    int res = 0;
-    res = process_load_binary(filename, process);
-    return res;
+    struct elf_file elf = {0};
+    ft_strcpy(elf.filename, filename);
+
+    if(elfloader_load_elf(&elf) == MYOS_ALL_OK)
+    {
+        process->ptr = elf.physical_base_address;
+        process->size = elf.in_memory_size;
+        process->elf_entry_point = (void*)elf_get_header(&elf)->e_entry;
+
+        if (elf.elf_memory)
+        {
+            kernel_free(elf.elf_memory);
+        }
+        return MYOS_ALL_OK;
+    }
+    return process_load_binary(filename, process);
 }
 
 int process_map_memory(struct process* process)
@@ -174,6 +189,12 @@ int process_map_binary(struct process *proc)
         kernel_free(proc);
         return res;
     }
+
+    if (proc->elf_entry_point)
+    {
+        proc->task->regs.ip = (uint32_t)proc->elf_entry_point;
+    }
+
     ft_strlcpy(proc->filename, binary_name, sizeof(proc->filename));
     proc->id   = pid;
     proc->task = t;

@@ -33,7 +33,7 @@ struct process
     uint16_t parent_id;
     int exit_code;
 
-    void* entry_point; //ELF header entry point
+    void* elf_entry_point; //ELF header entry point
 };
 
 int process_map_binary(struct process *proc);
