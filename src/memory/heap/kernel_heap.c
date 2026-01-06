@@ -2,8 +2,6 @@
 #include "heap.h"
 #include "../../lock/lock.h"
 #include "../../config.h"
-
-#include "../../kernel.h"
 #include "../../memory/memory.h"
 #include <stdint.h>
 
@@ -23,10 +21,8 @@ void kernel_heap_init()
     int res = heap_init(&kernel_heap, (void*)HEAP_ADDRESS, heap_end, &kernel_heap_table);
     if (res < 0)
     {
-        print("Kernel heap creation failed!\n");
         return ;
     }
-    print("Kernel heap initialized successfully.\n");
 }
 
 void kernel_free(void *ptr)

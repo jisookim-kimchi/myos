@@ -1,6 +1,10 @@
 #ifndef STATUS_H
 #define STATUS_H
 
+#define ERROR(value) (void *)(value)
+#define ERROR_I(value) (int)(value)
+#define ISERR(value) ((int)value < 0)
+
 #define MYOS_ALL_OK          0
 #define MYOS_IO_ERROR        1
 #define MYOS_INVALID_ARG     2

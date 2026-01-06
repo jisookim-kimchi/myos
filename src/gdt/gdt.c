@@ -1,7 +1,5 @@
 #include "gdt.h"
-#include "../kernel.h"
-#include "../config.h"
-#include "../string/string.h"
+#include "../kernel_print.h"
 
 void kernel_gdt_to_cpu_gdt(struct gdt* gdt, struct kernel_gdt* kernel_gdt, int total_entires)
 {

@@ -1,6 +1,6 @@
 #include "io.h"
 #include "../filesystem/file.h"
-#include "../kernel.h"
+#include "../kernel_print.h"
 #include "../keyboard/keyboard.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../task/process.h"

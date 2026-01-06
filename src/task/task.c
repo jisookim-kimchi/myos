@@ -1,12 +1,14 @@
 #include "task.h"
+#include "../kernel_print.h"
 #include "../config.h"
-#include "../kernel.h"
+#include "../system_control/system_control.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../memory/memory.h"
 #include "../memory/paging/paging.h"
 #include "../string/string.h"
 #include "../timer/timer.h"
 #include "process.h"
+#include "tss.h"
 
 struct task *task_cur = NULL;
 struct task *task_head = NULL;
@@ -23,6 +25,15 @@ int init_task(struct task *task, struct process *proc)
   {
     return -MYOS_ERROR_NO_MEMORY;
   }
+
+  // Allocate kernel stack
+  task->kstack = kernel_malloc(4096);
+  if (!task->kstack)
+  {
+      paging_free_4gb(task->page_directory);
+      return -MYOS_ERROR_NO_MEMORY;
+  }
+
   task->priority = TASK_PRIORITY_MEDIUM;
   task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
   task->regs.ss = MYOS_USER_DATA_SEGMENT;
@@ -181,11 +192,19 @@ void task_delete(struct task *task)
   kernel_free(task);
 }
 
+extern struct tss tss;
 int task_switch(struct task *task)
 {
   task_cur = task;
   paging_switch(task->page_directory);
   set_cur_process(task->process);
+
+  // Update TSS esp0 to point to the end of the new task's kernel stack
+  if (task->kstack)
+  {
+      tss.esp0 = (uint32_t)task->kstack + 4096;
+  }
+
   return 0;
 }
 
@@ -269,12 +288,25 @@ void save_registers(struct interrupt_frame *frame)
   task->regs.cs = frame->cs;
   task->regs.flags = frame->flags;
   
-  // Only save SS and ESP if we came from user mode (Ring 3)
-  // Low 2 bits of CS are the Current Privilege Level (CPL)
+  // If we came from user mode (Ring 3), SS and ESP are on the stack
+  /*
+  유저 모드(Ring 3)에서 인터럽트 발생 시: CPU는 "아, 권한이 바뀌는구나!" 하고 스택을 교체하면서 원래 유저의 SS와 ESP를 스택에 자동으로 저장해줍니다. 
+  그래서 frame->ss를 가져다 쓰면 됩니다.
+  커널 모드(Ring 0)에서 인터럽트 발생 시: CPU는 "어차피 커널 스택 쓰고 있네?" 하고 SS와 ESP를 저장하지 않습니다! 
+  오직 EFLAGS, CS, EIP만 저장하죠.
+  task->regs.ss = 0x10: 커널의 스택 세그먼트는 항상 고정된 0x10 (Kernel Data Selector)임을 우리가 알고 있으니 상수를 넣어주는 것입니다.
+  */
   if ((frame->cs & 0x03) == 0x03)
   {
       task->regs.esp = frame->esp;
       task->regs.ss = frame->ss;
+  }
+  else
+  {
+      // If we came from kernel mode (Ring 0), SS and ESP were NOT pushed by the CPU.
+      // The original ESP is simply the address just after the FLAGS on the stack.
+      task->regs.esp = (uint32_t)(uintptr_t)&frame->esp;
+      task->regs.ss = MYOS_KERNEL_DATA_SELECTOR;
   }
   
   task->regs.eax = frame->eax;

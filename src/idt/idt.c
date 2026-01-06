@@ -1,11 +1,10 @@
 #include "idt.h"
+#include "../kernel_print.h"
 #include "../config.h"
-#include "../memory/memory.h"
-#include "../kernel.h"
-#include "../task/task.h"
 #include "../io/io.h"
 #include "../keyboard/keyboard.h"
 #include "../mouse/mouse.h"
+#include "../memory/memory.h"
 #include "../timer/timer.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../memory/paging/paging.h"
@@ -164,20 +163,8 @@ void isr80h_handler(struct interrupt_frame* frame)
 {
     void* res = NULL;
     int ask = frame->eax; // System call command is in EAX
-    change_to_kernel_page();
+    paging_switch_to_kernel();
     save_registers(frame);
-    
-    /*
-    print("Kernel: Syscall ID ");
-    print_int(ask);
-    print(" entry at IP ");
-    print_int(frame->ip);
-    print(" (RA: ");
-    print_int((uint32_t)(uintptr_t)task_get_stack_item(get_cur_task(), 0));
-    print(", Arg1: ");
-    print_int((uint32_t)(uintptr_t)task_get_stack_item(get_cur_task(), 1));
-    print(")\n");
-    */
 
     res = isr80h_handle_command(ask, frame);
     frame->eax = (uint32_t)(uintptr_t)res;
@@ -187,8 +174,7 @@ void isr80h_handler(struct interrupt_frame* frame)
     {
         paging_switch(t->page_directory);
     }
-    
-    // print("Kernel: Syscall done, returning to user land\n");
+
 }
 
 //save the cur task;s state

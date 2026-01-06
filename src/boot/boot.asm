@@ -49,7 +49,7 @@ step2:
     mov eax, cr0          ; CRO's role : cpu mode setting 
     or eax, 1             ; PE 비트 설정 (Protected Mode Enable)
     mov cr0, eax            
-    jmp CODE_SEG:load32
+    jmp CODE_SEG:load32   ;far jump
     jmp $
     
 ;GDT in protected mode define memory segments

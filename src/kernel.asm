@@ -8,6 +8,9 @@ extern kernel_main
 CODE_SEG equ 0x08
 DATA_SEG equ 0x10
 
+;to run kernel_main
+;ebp : base pointer register, points to base of stack frame
+;esp : stack pointer register, points to last stack address
 _start:
     mov ax, DATA_SEG
     mov ds, ax
@@ -18,17 +21,12 @@ _start:
     mov ebp, 0x00200000
     mov esp, ebp
 
-    ;enable A20 line what is A20 ?: required for accessing memory above 1MB
+    ;enable A20 line: required for accessing memory above 1MB
     in al, 0x92
     or al, 2
     out 0x92, al
 
-    ;enable A20 line what is A20 ?: required for accessing memory above 1MB
-    in al, 0x92
-    or al, 2
-    out 0x92, al
-
-    ;Remap the Master PIC
+    ;Remap the Master PIC(PIC : Programmed Interrupt Controller ex keyboard, timer, mouse...)
     mov al, 00010001b   ; ICW1: Initialize PIC, expect ICW4 
     out 0x20, al        ; Send to Master PIC command port
     out 0xA0, al        ; Send to Slave PIC command port
@@ -55,20 +53,14 @@ _start:
     call kernel_main
     jmp $
 
-;in kernel there are just 2 selectors, kernel code and kernel data.
-;so we can use this selectors to switch to kernel mode.
-
+;restore registers to kernel mode
 kernel_registers:
     mov ax, DATA_SEG
     mov ds, ax
     mov es, ax
     mov gs, ax
     mov fs, ax
-    ret  
+    ret
 
-; IDT 테스트를 위한 Division by Zero 인터럽트 발생 함수
-;problem:
-    ;mov eax, 0    ; EAX 레지스터에 0 저장
-    ;div eax       ; 0 ÷ 0 연산 시도 → Division by Zero Exception (인터럽트 0번) 발생!
-
+;fill the rest of the sector with 0
 times 512-($ -$$) db 0 

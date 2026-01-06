@@ -6,6 +6,7 @@ extern main
 extern exit
 
 _start:
+    add esp, 4
     call main
     push eax
     call exit

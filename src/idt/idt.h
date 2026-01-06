@@ -22,7 +22,7 @@ struct interrupt_frame
   uint32_t fs;
   uint32_t es;
   uint32_t ds;
-  uint32_t vector_number;
+  uint32_t vector_number; //interrupt number
   uint32_t error_code;
   uint32_t ip;
   uint32_t cs;

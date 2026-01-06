@@ -12,55 +12,63 @@ global user_registers
 ;이 5개의 값이 “iret 프레임” 입니다.
 
 task_return:
-    ; make iret frames
-    ; PUSH THE DATA SEGMENT (SS WILL BE FINE)
-    ; PUSH THE STACK ADDRESS
-    ; PUSH THE FLAGS
-    ; PUSH THE CODE SEGMENT
-    ; PUSH IP
+    mov ebp, esp
+    ; Get the registers pointer from the first argument [ebp+4]
+    mov ebx, [ebp+4]
+    
+    ; Check RPL (low 2 bits) of task's CS to decide on IRET frame size
+    mov ax, [ebx+32] ; task->regs.cs
+    and ax, 3 ; & 0000 0000 0000 0011 이렇게되네,,,
+    cmp ax, 3
+    jne .return_to_kernel ; jne : jump if not equal
 
-    ; Let's access the structure passed to us
-    mov ebx, [esp+4] ;get the first argument passed to us
-    ; push the data/stack selector
-    push dword [ebx+44] ;in structure task, we push the ss because it is offset 44
-    ; Push the stack pointer
-    push dword [ebx+40] ;in structure task, we push the esp because it is offset 40
+.return_to_user:
+    ; Setup the full IRET frame (SS, ESP, FLAGS, CS, IP) for Ring 3
+    push dword [ebx+44] ; ss
+    push dword [ebx+40] ; esp
+    push dword [ebx+36] ; flags
+    push dword [ebx+32] ; cs
+    push dword [ebx+28] ; ip
+    jmp .restore_common
 
-    ; Push the flags
-    pushf
-    pop eax
-    or eax, 0x200
-    push eax
+.return_to_kernel:
+    ; Ring 0: iretd pops ONLY FLAGS, CS, EIP.
+    ; CRITICAL: Switch to the target task's ESP before pushing the frame!
+    mov esp, [ebx+40]
+    push dword [ebx+36] ; flags
+    push dword [ebx+32] ; cs
+    push dword [ebx+28] ; ip
 
-    ; Push the code segment
-    push dword [ebx+32]
-
-    ; Push the IP to execute
-    push dword [ebx+28]
-
-    ; Setup some segment registers
-    mov ax, [ebx+44]
+.restore_common:
+    ; Restore segment registers (using data selector)
+    mov ax, [ebx+44] ; if user, it's 0x23. if kernel, it's 0x10.
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
 
-    push ebx
-    call restore_registers
-    add esp, 4
+    ; Restore general purpose registers EXCEPT EBX and EBP
+    mov edi, [ebx]
+    mov esi, [ebx+4]
+    mov edx, [ebx+16]
+    mov ecx, [ebx+20]
+    mov eax, [ebx+24]
 
-    ; Let's leave kernel land and execute in user land!
+    ; Restore EBP then EBX last
+    mov ebp, [ebx+8]
+    mov ebx, [ebx+12]
+
     iretd
 
 restore_registers:
-    mov ebx, [esp+4] ; Load the pointer to the registers struct (1st argument)
+    mov ebx, [esp+4] 
     mov edi, [ebx]
     mov esi, [ebx+4]
     mov ebp, [ebx+8]
     mov edx, [ebx+16]
     mov ecx, [ebx+20]
     mov eax, [ebx+24]
-    mov ebx, [ebx+12] ; Restore EBX last!
+    mov ebx, [ebx+12] 
     ret
 
 

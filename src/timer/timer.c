@@ -1,8 +1,6 @@
 #include "timer.h"
 #include "../io/io.h"
-#include "../kernel.h"
 #include "../task/task.h"
-#include "../task/process.h"
 
 static uint32_t tick = 0;
 

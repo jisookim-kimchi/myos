@@ -1,6 +1,6 @@
 #include "file.h"
 #include "../config.h"
-#include "../kernel.h"
+#include "../kernel_print.h"
 #include "../memory/heap/kernel_heap.h"
 #include "../memory/memory.h"
 #include "../status.h"
@@ -35,7 +35,7 @@ void file_system_insert(struct filesystem *fs)
   struct filesystem **filesystems = get_free_filesystem();
   if (filesystems == NULL)
   {
-    print("No space to insert filesystem!\n");
+    print("no space to insert filesystem ㅠㅠ\n");
     return;
   }
   *filesystems = fs;

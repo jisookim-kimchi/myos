@@ -37,6 +37,7 @@ int heap_init(heap_t *heap, void *ptr, void *end, heap_table_t *table)
     ft_memset(heap, 0, sizeof(heap_t));
     heap->start_address = ptr;
     heap->table = table;
+    //heap->last_block = 0;
 
     res = heap_validate_table(ptr, end, table);
     if (res < 0)
@@ -52,18 +53,6 @@ uint32_t heap_calculate_required_blocks(size_t size)
 {
     return (size + MYOS_HEAP_BLOCK_SIZE - 1) / MYOS_HEAP_BLOCK_SIZE;
 }
-
-// static uint32_t heap_calculate_required_blocks(size_t size)
-// {
-//     if (size % MYOS_HEAP_BLOCK_SIZE == 0)
-//         return size;
-//     else
-//     {
-//         size = size - (size % MYOS_HEAP_BLOCK_SIZE);
-//         size += MYOS_HEAP_BLOCK_SIZE;
-//         return size;
-//     }
-// }
 
 static int heap_get_entry_type(HEAP_BLOCK_TABLE_ENTRY entry)
 {

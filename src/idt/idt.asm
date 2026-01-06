@@ -31,11 +31,13 @@ idt_load:
     ret
 
 ; 1. Macro Definitions
+; %macro (함수이름) (인자번호) 여기선 1이니까 1번째인자말하는것. 
+; interrupts frame 구조체보면 error code변수가 있음, 거기에 error code를 넣어주기위해서 push dword 0
 %macro INTERRUPT_NO_ERROR_CODE 1
     global interrupt_%1
     interrupt_%1:
-        push dword 0      ; Dummy error code
-        push dword %1     ; Interrupt Number
+        push dword 0      ; Dummy error code ;frame 구조체에서 error code에 들어가고
+        push dword %1     ; Interrupt Number ;frame 구조체에서 interrupt number에 들어감
         jmp interrupt_common_stub
 %endmacro
 
@@ -63,9 +65,9 @@ interrupt_common_stub:
     mov gs, ax
     
     ; Call C handler
-    push esp            ; Pass struct interrupt_frame* (points to stack top)
+    push esp            ; pass struct interrupt_frame* (points to stack top)
     call interrupt_handler
-    add esp, 4          ; Pop argument
+    add esp, 4          ; pop argument
     
     ; Restore state
     popad
@@ -114,6 +116,7 @@ INTERRUPT_NO_ERROR_CODE 30
 INTERRUPT_NO_ERROR_CODE 31
 
 ; user interrupts 32~511
+; rep : 반복문임.
 %assign i 32
 %rep 480
     INTERRUPT_NO_ERROR_CODE i

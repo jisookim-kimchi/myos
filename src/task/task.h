@@ -42,17 +42,20 @@ struct process;
  
 struct task
 {
-    struct registers regs;               // renamed from "register"
-    struct paging_4gb_chunk *page_directory;
+  struct registers regs;               // renamed from "register"
+  struct paging_4gb_chunk *page_directory;
 
-    struct task *next;
-    struct task *prev;
-    struct process *process;
-    int state;
-    void *event_wait_channel;
-    uint32_t sleep_expiry;
-    int priority;
-    int ticks_usage;
+  // The kernel stack for this task
+  void *kstack;
+
+  struct task *next;
+  struct task *prev;
+  struct process *process;
+  int state;
+  void *event_wait_channel;
+  uint32_t sleep_expiry;
+  int priority;
+  int ticks_usage;
 };
 
 int init_task(struct task* task, struct process* process);

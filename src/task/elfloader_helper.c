@@ -105,5 +105,5 @@ void* elf_get_phys_end(struct elf_file* elf_file)
 
 int elf_validate(struct elf_header* elf_header)
 {
-    return (elfloader_validate_elf_magic(elf_header) && elf_valid_class(elf_header) && elf_valid_encoding(elf_header) && elf_has_program_header(elf_header)) ? MYOS_ALL_OK : -MYOS_INVALID_ARG;
+    return (elfloader_validate_elf_magic(elf_header) && elf_valid_class(elf_header) && elf_valid_encoding(elf_header) && elf_has_program_header(elf_header)) && elf_is_executable(elf_header)? MYOS_ALL_OK : -MYOS_INVALID_ARG;
 }

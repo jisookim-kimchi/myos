@@ -1,8 +1,5 @@
 #include "keyboard.h"
 #include "../io/io.h"
-#include "../isr80h/io.h"
-#include "../kernel.h"  
-#include "../idt/idt.h"
 #include "../task/task.h"
 #include "../task/process.h"
 

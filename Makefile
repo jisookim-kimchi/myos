@@ -8,6 +8,8 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/memory/paging/paging.o $(BUILD_DIR)/memory/paging/paging.asm.o \
 		$(BUILD_DIR)/disk/disk.o $(BUILD_DIR)/disk/streamer.o $(BUILD_DIR)/filesystem/pathparser.o \
 		$(BUILD_DIR)/filesystem/file.o $(BUILD_DIR)/string/string.o $(BUILD_DIR)/filesystem/fat16.o \
+		$(BUILD_DIR)/filesystem/fat16_file_ops.o $(BUILD_DIR)/filesystem/fat16_helper.o \
+		$(BUILD_DIR)/filesystem/fat16_directory.o \
 		$(BUILD_DIR)/gdt/gdt.o $(BUILD_DIR)/gdt/gdt.asm.o \
 		$(BUILD_DIR)/task/tss.asm.o \
 		$(BUILD_DIR)/task/task.o \
@@ -22,7 +24,8 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/lock/lock.asm.o \
 		$(BUILD_DIR)/task/elfloader.o \
 		$(BUILD_DIR)/task/elfloader_helper.o \
-		$(BUILD_DIR)/task/elf.o
+		$(BUILD_DIR)/task/elf.o \
+		$(BUILD_DIR)/kernel_print.o
 
 
 INCLUDES = -I$(SRC_DIR)/

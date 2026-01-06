@@ -22,6 +22,10 @@ typedef struct paging_4gb_chunk
     uint32_t *directory_entry;
 } paging_4gb_chunk_t;
 
+void paging_init_kernel_4gb(uint8_t flags);
+void paging_switch_to_kernel(void);
+paging_4gb_chunk_t *paging_get_kernel_chunk(void);
+
 paging_4gb_chunk_t* paging_new_4gb(uint8_t flags);
 uint32_t *get_paging_4gb_dir(paging_4gb_chunk_t* chunk);
 void paging_switch(paging_4gb_chunk_t* chunk);

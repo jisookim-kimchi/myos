@@ -1,8 +1,8 @@
 #ifndef FAT16_H
 #define FAT16_H
 
-#include <stdint.h>
 #include "file.h"
+#include <stdint.h>
 
 #define FAT16_SIGNATURE 0x29
 #define FAT16_FAT_ENTRY_SIZE 0x02
@@ -24,122 +24,153 @@ typedef unsigned int FAT_ITEM_TYPE;
 #define FAT_FILE_DEVICE 0x40
 #define FAT_FILE_RESERVED 0x80
 
-//wiki os dev EBPB(Extended )
-struct fat_header_extended
-{
-    uint8_t drive_number;
-    uint8_t win_nt_bit;
-    uint8_t signature;
-    uint32_t volume_id;
-    uint8_t volume_id_string[11];
-    uint8_t system_id_string[8];
+// wiki os dev EBPB(Extended)
+struct fat_header_extended {
+  uint8_t drive_number;
+  uint8_t win_nt_bit;
+  uint8_t signature;
+  uint32_t volume_id;
+  uint8_t volume_id_string[11];
+  uint8_t system_id_string[8];
 } __attribute__((packed));
 
-//BPB (BIOS Parameter BLOCK)
-struct fat_header
-{
-    uint8_t short_jmp_ins[3];
-    uint8_t oem_identifier[8];
-    uint16_t bytes_per_sector;
-    uint8_t sectors_per_cluster;
-    uint16_t reserved_sectors;
-    uint8_t fat_copies;
-    uint16_t root_dir_entries;
-    uint16_t number_of_sectors;
-    uint8_t media_type;
-    uint16_t sectors_per_fat;
-    uint16_t sectors_per_track;
-    uint16_t number_of_heads;
-    uint32_t hidden_setors;
-    uint32_t sectors_big;
+// BPB (BIOS Parameter BLOCK)
+struct fat_header {
+  uint8_t short_jmp_ins[3];
+  uint8_t oem_identifier[8];
+  uint16_t bytes_per_sector;
+  uint8_t sectors_per_cluster;
+  uint16_t reserved_sectors;
+  uint8_t number_of_fats;
+  uint16_t root_dir_entries;
+  uint16_t number_of_sectors;
+  uint8_t media_type;
+  uint16_t sectors_per_fat;
+  uint16_t sectors_per_track;
+  uint16_t number_of_heads;
+  uint32_t hidden_setors;
+  uint32_t sectors_big;
 } __attribute__((packed));
 
-
-struct fat_h
-{
-    struct fat_header primary_header;
-    //fat_header_extended is optional so union
-    union fat_h_e
-    {
-        struct fat_header_extended extended_header;
-    } shared;
+struct fat_h {
+  struct fat_header primary_header;
+  // fat_header_extended is optional so union
+  union fat_h_e {
+    struct fat_header_extended extended_header;
+  } shared;
 };
 
-//items in an Directory
-struct fat_directory_item
-{
-    uint8_t filename[8];
-    uint8_t ext[3];
-    uint8_t attribute;
-    uint8_t reserved;
-    uint8_t creation_time_tenths_of_a_sec;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access;
-    uint16_t high_16_bits_first_cluster;
-    uint16_t last_mod_time;
-    uint16_t last_mod_date;
-    uint16_t low_16_bits_first_cluster;
-    uint32_t filesize;
+// items in an Directory
+struct fat_directory_item {
+  uint8_t filename[8];
+  uint8_t ext[3];
+  uint8_t attribute;
+  uint8_t reserved;
+  uint8_t creation_time_tenths_of_a_sec;
+  uint16_t creation_time;
+  uint16_t creation_date;
+  uint16_t last_access;
+  uint16_t high_16_bits_first_cluster;
+  uint16_t last_mod_time;
+  uint16_t last_mod_date;
+  uint16_t low_16_bits_first_cluster;
+  uint32_t filesize;
 } __attribute__((packed));
 
-struct fat_directory
-{
-    struct fat_directory_item* item;
-    uint32_t total;
-    uint32_t sector_pos;
-    uint32_t ending_sector_pos;
+struct fat_directory {
+  struct fat_directory_item *item;
+  uint32_t total;
+  uint32_t sector_pos;
+  uint32_t ending_sector_pos;
 };
 
-struct fat_item
-{
-    union 
-    {
-        struct fat_directory_item* dir_item;
-        struct fat_directory* directory;
-    };
-    uint32_t item_entry_sector;
-    uint32_t item_entry_offset;
-    FAT_ITEM_TYPE type;
+struct fat_item {
+  union {
+    struct fat_directory_item *dir_item;
+    struct fat_directory *directory;
+  };
+  uint32_t item_entry_sector;
+  uint32_t item_entry_offset;
+  FAT_ITEM_TYPE type;
 };
 
-struct fat_file_descriptor
-{
-    struct fat_item* item;
-    uint32_t pos;
+struct fat_file_descriptor {
+  struct fat_item *item;
+  uint32_t pos;
 };
 
-struct fat_private
-{
-    struct fat_h header;
-    struct fat_directory root_directory;
+struct fat_private {
+  struct fat_h header;
+  struct fat_directory root_directory;
 
-    // Used to stream data clusters
-    struct disk_streamer* cluster_read_stream;
+  // Used to stream data clusters
+  struct disk_streamer *cluster_read_stream;
 
-    // Used to stream the file allocation table
-    struct disk_streamer* fat_read_stream;
+  // Used to stream the file allocation table
+  struct disk_streamer *fat_read_stream;
 
-    // Used in situations where we stream the directory
-    struct disk_streamer* directory_stream;
+  // Used in situations where we stream the directory
+  struct disk_streamer *directory_stream;
 };
 
-filesystem_t* fat16_init();
-void* fat16_open(struct disk* disk, struct path_part* path, FILE_MODE mode);
-int fat16_resolve(struct disk* disk);
-struct fat_item* fat16_get_dir_entry(struct disk* disk, struct path_part* path);
-struct fat_item* fat16_find_item_in_dir(struct disk* disk, struct fat_directory* directory, const char* name);
-void format_83_to_string(struct fat_directory_item* item, char *out, int max);
-struct fat_directory_item *fat16_clone_dir_item(struct fat_directory_item *src, size_t size);
+filesystem_t *fat16_init();
+void *fat16_open(struct disk *disk, struct path_part *path, FILE_MODE mode);
+int fat16_resolve(struct disk *disk);
+struct fat_item *fat16_get_dir_entry(struct disk *disk, struct path_part *path);
+struct fat_item *fat16_find_item_in_dir(struct disk *disk,
+                                        struct fat_directory *directory,
+                                        const char *name);
+void format_83_to_string(struct fat_directory_item *item, char *out, int max);
+struct fat_directory_item *fat16_clone_dir_item(struct fat_directory_item *src,
+                                                size_t size);
 
-int fat16_read(struct disk *disk, uint32_t offset, void *private_data, uint32_t read_size, uint32_t nmemb, char *out);
-int fat16_create_file(struct disk* disk, struct path_part* path);
-int fat16_write(struct disk *disk, void *private_data, uint32_t write_size, uint32_t nmemb, char *out);
+int fat16_get_root_directory(struct disk *disk, struct fat_private *fat_private,
+                             struct fat_directory *out_directory);
+int fat16_read_internal(struct disk *disk, int cluster, int offset, int size,
+                        void *out_buffer);
+int fat16_write_internal(struct disk *disk, int cluster, uint32_t offset,
+                         uint32_t total_bytes, void *data);
+int fat16_read(struct disk *disk, uint32_t offset, void *private_data,
+               uint32_t read_size, uint32_t nmemb, char *out);
+int fat16_create_file(struct disk *disk, struct path_part *path);
+int fat16_write(struct disk *disk, void *private_data, uint32_t write_size,
+                uint32_t nmemb, char *out);
 
-void fat16_free_dir(struct fat_directory* directory);
-void fat16_item_free(struct fat_item* item);
+void fat16_free_dir(struct fat_directory *directory);
+void fat16_item_free(struct fat_item *item);
 int fat16_unresolve(struct disk *disk);
 int fat16_seek(void *private, int offset, FILE_SEEK_MODE seek_mode);
 int fat16_stat(void *private, struct file_stat *stat);
 int fat16_close(void *private);
+int fat16_free_cluster_chain(struct disk *disk, uint32_t cluster);
+
+int fat16_get_cluster_size(struct disk *disk, struct fat_private *private);
+int fat16_set_next_cluster(struct disk *disk, int cluster, int next_cluster);
+struct fat_item *
+fat16_new_item_from_directory_item(struct disk *disk,
+                                   struct fat_directory_item *directory_item);
+int fat16_get_first_cluster(struct fat_directory_item *item);
+int fat16_get_sector_from_cluster(struct fat_private *private, int cluster);
+int fat16_get_cluster_chain_link(struct disk *disk, int cur_cluster,
+                                 int cluster_offset);
+int fat16_find_free_cluster(struct disk *disk);
+int fat16_get_cluster_size(struct disk *disk, struct fat_private *private);
+struct fat_directory *
+fat16_load_for_sub_directory(struct disk *disk,
+                             struct fat_directory_item *item);
+struct fat_item *
+fat16_new_item_from_directory_item(struct disk *disk,
+                                   struct fat_directory_item *directory_item);
+int fat16_get_next_cluster(struct disk *disk, int cur_cluster);
+int fat16_set_next_cluster(struct disk *disk, int cluster, int next_cluster);
+int fat16_update_directory_entry(struct disk *disk,
+                                 struct fat_file_descriptor *file_descriptor,
+                                 int bytes_written);
+void fat16_print_hex_byte(unsigned char b);
+int fat16_sector_to_absolute(struct disk *disk, int root_dir_sector_pos);
+int fat16_get_total_cluster_counts(struct disk *disk,
+                                   struct fat_directory_item *item);
+void fat16_to_dos_filename(const char *fname, uint8_t *out_name,
+                           uint8_t *out_ext);
+
 #endif

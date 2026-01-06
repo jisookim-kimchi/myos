@@ -1,11 +1,28 @@
 #include "paging.h"
 #include "../heap/kernel_heap.h"
-#include "../../kernel.h"
+#include "../../system_control/system_control.h"
 #include "../../config.h"
 
 static uint32_t* cur_dir = 0;
+static paging_4gb_chunk_t *kernel_chunk = 0;
 
 void paging_load_dir(uint32_t *dir);
+
+void paging_init_kernel_4gb(uint8_t flags)
+{
+    kernel_chunk = paging_new_4gb(flags);
+}
+
+void paging_switch_to_kernel(void)
+{
+    kernel_registers();
+    paging_switch(kernel_chunk);
+}
+
+paging_4gb_chunk_t *paging_get_kernel_chunk(void)
+{
+    return kernel_chunk;
+}
 
 //각 프로세스마다 4GB 가상 메모리 공간을 할당해주는 함수
 struct paging_4gb_chunk* paging_new_4gb(uint8_t flags)
@@ -95,7 +112,6 @@ out:
     return res;
 }
 
-//
 uint32_t paging_get(uint32_t *directory, void *virt)
 {
     uint32_t dir_index = 0;

@@ -24,6 +24,7 @@ typedef struct heap
 {
     heap_table_t* table;    // struct 제거, typedef 이름 사용
     void *start_address;    // 이거 절대 건드리면 안됨.
+    //uint32_t last_block;    // 이거 나중에 필요할지도모름.
 }   heap_t;
 
 int heap_init(heap_t *heap, void *ptr, void *end, heap_table_t *table);
