@@ -40,14 +40,18 @@ struct process
 
 int process_map_binary(struct process *proc);
 int process_load_for_slot(const char *filename, struct process **out_proc, int pid);
-int process_map_memory(struct process* process);
+int process_map_virtual_memory(struct process* process);
 int process_load_data(const char* filename, struct process* process);
 struct process* get_process(int pid);
 struct process* get_cur_process();
+int get_process_free_slot();
 void set_cur_process(struct process* process);
 void* process_sbrk(struct process* proc, int increment);
 int process_load(const char *filename, struct process **process);
 int process_exit(int exit_code);
 int process_wait(int* status);
 void process_setup_arguments(struct process* process, const char* command_line);
+
+extern struct process* processes[MYOS_MAX_PROCESSES];
+
 #endif

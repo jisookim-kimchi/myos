@@ -1,3 +1,5 @@
+
+
 MyOS: 32비트 x86 운영체제
 
 # 부트로더
@@ -136,7 +138,7 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
   4. Page Frame(Physical Frame)(4kb) : 물리 메모리의 페이지. (실제 집 주소.)
 
 
-# 힙
+# 힙(HEAP)
   
   Heap Table :
   명심해라 우리는 4KB블록 단위로 관리한다.
@@ -147,13 +149,21 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
   malloc 호출 -> heap_calculate_required_blocks(size)로 필요한 블록 수 계산 -> 테이블 처음(Index 0)부터 시작해서 요청된 사이즈를 충족하는 연속된 빈 공간 찾음 -> 찾으면 heap_mark_blocks_as_taken() 호출해서 "taken"으로 마킹 -> 주소반환.
 
 # 인터럽트(Interrupt)
-  
+
 ring3 이 int0x80을 호출하면 ->
 cpu는 TSS를 보고 ESP0(커널스택)으로 스택 포인터를 옮기고.
 기존 위치(유저 스택, 주소 ,코드위치)를 커널 스택에 백업함.
-
 그리고나서 (idt.asm 에서 Restore state참조) popad를 하고 iret하면 복구.
-
+idt.asm보면,
+참고로 pop은 esp를 +4 push랑은 다름 그리고 esp를 레지스터에 넣어서 복구시키는건데, 사실 이것도 처음알았다...
+; Restore state
+    popad          ;저장했던 EAX, EBX.. 등 8개 레지스터 한 방에 복구!
+    pop gs         ;세그먼트 레지스터들도 하나씩꺼내
+    pop fs         ;
+    pop es         ;
+    pop ds         ;
+    add esp, 8     ;
+    iret           ;Ring 3로 귀환
 
   1. IDT(Interrupt Descriptor Table):
   0~255 번까지 있는데 각 인터럽트에 대한 정보를 담고있음.
@@ -167,25 +177,99 @@ cpu는 TSS를 보고 ESP0(커널스택)으로 스택 포인터를 옮기고.
   또 구조체 첫번째 가 사실은 스택의 최상위 주소를 가리키는거.. 즉 구조체 첫번째 멤버가 가장 낮은 주소임. 이부분도 몰라서 에러났었음.
 
   3. ISR80h
+  eax레지스터에게 시스템콜 번호를 넣고 interrupt_128로 점프함.
+  그리고 레지스터 pushad후 interrupt_handler로 점프함.
+  interrupt_handler에서 eax 값 확인후 시스템골 처리 isr80h_handle_command확인.
+  
+ 어떻게 데이터를 전달?
+  - 유저 프로그램이 인자(문자열 포인터)를 스택에 push
+  - 커널은 task_get_stack_item 함수를 사용해 유저 스택의 내용을 읽어옵니다.
+  - 그리고 copy_from_task 를 사용해서 유저 -> 커널로 데이터 복사.
+  중요! 커널이 잠시 유저의 페이지 디렉토리로 paging_switch하여 해당 메모리를 읽어온 후 다시 커널로 복귀하는거임. 잠깐 훔쳐보는...
 
-  4. 키보드
+  4. Hardware Interrupt
+  I/O 버스(고속도로같은것)를 통해 포트에서 데이터를 읽어옴.
+  키보드 누르면 IRQ 1번, -> IDT 0x21으로 점프하고
+  포트 0x60(키보드 데이터포트)에서 데이터를 읽어옴.
+  io.asm이 driver역할을함.
+ 
+# TASK
+task는 thread같은 개념이라 생각하면됨.
+그럼 어떻게 task가 process의 공유자원을 사용하게되나 이게 중요하다고 보거든요?
+1. process 를 먼저 만들고.
+2. init_task를 호출할때 4gb 메모리 디렉터리를 만듦. 이때 task->process = process;
+3. 파일 데이터 로드 -> 물리 메모리에 로드.
+4. 중요한것 :
+process_map_memory는 가상메모리를 물리메모리에 매핑해서 물리메모리를 연결하는것.
+(각 TASK의 개인 사유지?)
+task 에는 페이지 디렉터리가 있음 그리고 process_map_binary 함수에서 페이지의 디렉터리에 process의 물리 주소를 매핑해버림 이 의미는 task가 여러개여도 process의 물리메모리공간을 공유할수있음.
+
+# Scheduling (Context Switching)
+
+1. Scheduling
+라운드로빈 방식으로 리스트의 next를 따라가며 다음 실행할 Task를 선택.
+timer interrupt를 사용해서 10ms마다 preemptive(선점형)스케쥴링.
+task가 양보하지않아도 os가 강제로 바꿈.
+왜 선점형으로 구현했나?
+어떤 프로그램이 버그에 빠져도 10ms 마다 강제로 바꾸니 안멈춤.
+우선순위큐 구현해서 우선순위에 따라 스케줄링하는 것도 좋은 방법일듯.
+지금은 그냥 로직만 구현해버림.
+어떻게 priority를 구분하냐? -> 혼자 100ms 쓰면 priority 내려버림.
+왜? 즉각 반응하게 하기위해서!
+
+생각해볼 방식:
+테스크 마다 고정적인 우선순위를 주어서 하는 방식도 생각해봄 -> 이런건 임베디드에서 중요할듯.
+미리 예약하는것도 있을테고...
+
+2. Context Switching
+task_switch 와 task_return
+
+3. 바꿔치기 CR3 Switch
+paging_switch(task->page_directory);
+CR3 레지스터에 새로운 Task의 페이지 디렉토리 주소를 넣습니다.
+이 순간 CPU가 바라보는 가상 메모리 공간이 Task A의 세상 -> Task B의 세상으로 확 바뀝니다. (코드 영역과 16KB 스택이 교체됨)
+
+4. 권한 복구 준비 TSS Update
+tss.esp0 = new_task->kstack + 4096;
+TSS (Task State Segment): CPU에게 "유저 모드(Ring 3)에서 인터럽트 걸리면, 커널 모드(Ring 0) 
+* 각 Task마다 별도의 커널 스택을 가지므로, 스위칭할 때마다 TSS도 갱신해줘야  함!
+
+# PROCESS
+   (메모리, 파일 등)을 포함하는 하우스(house)
+   실제로 CPU를 차지하고 코드를 실행하는 일꾼입니다. (Context Switching의 대상)
+   프로세스는 하나 이상의 태스크를 가집니다.
+   지금은 1:1 관계...늘리면 멀티태스킹...
+생성흐름은 process_load_for_slot -> process_load_data -> process_map_virtual_memory -> process_setup_arguments -> iret 이렇게.
 
 
+# ELF
+ELF는 약간 지도라고 생각하면됨 코드는 여기 데이터는 저기 이런식으로 알려주는 것.
+process_load_data -> elfloader_load_elf 흐름.
 
+# Sbrk (Memory Allocation)
+유저 프로그램이 malloc을 하다가 힙 공간이 부족하면 `sbrk` 시스템 콜을 요청.
+malloc 함수보면 알수있음.
+프로세스의 `cur_end_heap`을 늘리고, 늘어난 공간만큼 실제 물리 페이지를 할당해서 매핑해줌.
+
+# 실행 방법
+1. `./build.sh`를 실행하여 커널과 유저 프로그램을 컴파일.
+2. `qemu-system-i386 -hda ./bin/myos.bin`을 실행하여 운영체제 구동.
+3. 쉘에서 명령어 입력: `run 0:/bf.bin 0:/hello.bf` 
+4. `run 0:/blank.bin` (빈 프로그램 실행 테스트)
+5. `run 0:/waiter.bin` (부모-자식 프로세스 대기 테스트)
+6. `run 0:/shell.bin` (shell 실행 테스트)
+
+## references
+그냥 모를때마다 OsDev Wiki를 참고했고, 사실 구글링도 많이했는데,,, OSDev Wiki가 젤 편했고,
+구글에 소스는 무진장 많음 대표적인 두곳만 소개하자면,,,
+- **OSDev Wiki (https://wiki.osdev.org)**: OS 개발의 백과사전 같은 곳으로, 하드웨어 명세를 이해하는 데 필수적이고 구조체 짜는데 있어서 참조 많이함.
+- **(https://m.blog.naver.com/simhs93/)**: 한글로 된 훌륭한 강의.
+그외 더많은데 두가지를 가장 많이 참조했습니다.
+
+느낀점...
 정말 많지만 어셈블리를 배워야 했고 솔직히 아직까지도 잘 못짜지만, 이제는 코드를 읽고 흐름을 파악하며 필요한 기능을 구현할 수 있게 되었습니다.
 특히 인터럽트라는 개념은 어느정도 알고있었는데, 어떻게 커널로 돌아가는지 tss를 구현하면서 배웠고.
 또 task 구조체를 구현하면서 커널스택과 유저스택을 구분하는 부분도 배웠고.
 어셈블리가 처음엔 외계어 같았지만, `boot.asm`부터 `kernel.asm`까지 한 줄씩 분석하며 하드웨어와 대화하는 법을 익힐 수 있었던 가장 소중한 경험이었습니다.
-
-
-##  실행 방법
-
-1. `./build.sh`를 실행하여 커널과 유저 프로그램을 컴파일합니다.
-2. `qemu-system-i386 -hda ./bin/myos.bin`을 실행하여 운영체제를 구동합니다.
-3. 쉘에서 상호작용합니다: `run 0:/bf.bin 0:/hello.bf`
-
-
-## references
-- **OSDev Wiki (https://wiki.osdev.org)**: OS 개발의 백과사전 같은 곳으로, 하드웨어 명세를 이해하는 데 필수적이고 구조체 짜는데 있어서 참조 많이함.
-- **(https://m.blog.naver.com/simhs93/)**: 한글로 된 훌륭한 강의.
-그외 더많은데 두가지를 가장 많이 참조했습니다.
+그리고 디버깅 gdb를 사용해서 커널을 디버깅하는 것도 정말 좋았다.
+근데 makefile짜는건 솔직히 복잡하고 어려웠음.

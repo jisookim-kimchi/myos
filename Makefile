@@ -14,6 +14,8 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/tss.asm.o \
 		$(BUILD_DIR)/task/task.o \
 		$(BUILD_DIR)/task/process.o \
+		$(BUILD_DIR)/task/process_ops.o \
+		$(BUILD_DIR)/task/process_loader.o \
 		$(BUILD_DIR)/isr80h/process.o \
 		$(BUILD_DIR)/task/task.asm.o \
 		$(BUILD_DIR)/isr80h/isr80h.o \

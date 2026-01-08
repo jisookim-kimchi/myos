@@ -13,6 +13,7 @@
 struct task *task_cur = NULL;
 struct task *task_head = NULL;
 struct task *task_tail = NULL;
+extern struct tss tss;
 
 int init_task(struct task *task, struct process *proc)
 {
@@ -192,14 +193,13 @@ void task_delete(struct task *task)
   kernel_free(task);
 }
 
-extern struct tss tss;
 int task_switch(struct task *task)
 {
   task_cur = task;
   paging_switch(task->page_directory);
   set_cur_process(task->process);
 
-  // Update TSS esp0 to point to the end of the new task's kernel stack
+  // save kernel stack pointer.
   if (task->kstack)
   {
       tss.esp0 = (uint32_t)task->kstack + 4096;

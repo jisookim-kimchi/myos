@@ -53,14 +53,9 @@ void kernel_main()
   ft_memset(&tss, 0x00, sizeof(tss));
 
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
-  // 유저 모드에서 인터럽트가 발생하면, CPU는 자동으로 스택을 여기(0x600000)로
-  // 바꿉니다. 그리고 원래 유저가 쓰던 스택 위치(ESP)를 여기에 저장해둡니다.
-  // 인터럽트 터지면 무조건 여기적힌 커널스택으로 돌아간다.
   tss.esp0 = 0x600000;
   tss.ss0 = MYOS_KERNEL_DATA_SELECTOR;
   tss_load(0x28);
-  // Move interrupts enable to later
-  // enable_interrupts();
 
   file_system_init();
 
@@ -82,18 +77,6 @@ void kernel_main()
     fclose(fd);
     print("File closed.\n");
   }
-  // ------------------------
-
-  // malloc debug test.
-  //  void *ptr = kernel_malloc(50);
-  //  void *ptr2 = kernel_malloc(5000);
-  //  void *ptr3 = kernel_malloc(5600);
-  //  kernel_free(ptr);
-  //  void *ptr4 = kernel_malloc(50);
-  //  if (ptr || ptr2 || ptr3 || ptr4)
-  //  {
-  //      print("Kernel malloc succeeded!\n");
-  //  }
 
   paging_init_kernel_4gb(PAGING_PRESENT | PAGING_WRITEABLE | PAGING_USER_ACCESS);
 
