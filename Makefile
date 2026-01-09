@@ -27,7 +27,8 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/task/elfloader.o \
 		$(BUILD_DIR)/task/elfloader_helper.o \
 		$(BUILD_DIR)/task/elf.o \
-		$(BUILD_DIR)/kernel_print.o
+		$(BUILD_DIR)/kernel_print.o \
+		$(BUILD_DIR)/pci/pci.o
 
 
 INCLUDES = -I$(SRC_DIR)/
@@ -49,7 +50,6 @@ $(BIN_DIR)/myos.bin: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin programs
 	sudo cp ./src/programs/waiter/waiter.bin /mnt/d
 	sudo cp ./src/programs/bf/bf.bin /mnt/d
 	sudo cp ./hello.bf /mnt/d
-	sudo cp ./simple.bf /mnt/d
 	sudo umount /mnt/d
 
 $(BIN_DIR)/kernel.bin: $(FILES)

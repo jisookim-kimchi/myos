@@ -88,7 +88,7 @@ gdt_descriptor:
 [BITS 32]
 load32:
     mov eax, 1
-    mov ecx, 100
+    mov ecx, 150
     mov edi, 0x0100000 ;kernel load address
     call ata_lba_read
     jmp CODE_SEG:0x0100000 ; Jump to kernel entry point at 1MB

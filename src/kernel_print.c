@@ -138,7 +138,7 @@ void print_hex(uint32_t n)
   buf[1] = 'x';
   for (int i = 7; i >= 0; i--)
   {
-    buf[i + 2] = hex_chars[(n >> (i * 4)) & 0xF];
+    buf[2 + (7 - i)] = hex_chars[(n >> (i * 4)) & 0xF];
   }
   buf[10] = '\0';
   print(buf);

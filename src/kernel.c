@@ -13,6 +13,7 @@
 #include "string/string.h"
 #include "task/process.h"
 #include "timer/timer.h"
+#include "pci/pci.h"
 
 void __attribute__((section(".entry"))) start(void)
 {
@@ -48,15 +49,24 @@ void kernel_main()
 
   kernel_heap_init();
   idt_init();
+
   keyboard_init();
   timer_init(100);
-  ft_memset(&tss, 0x00, sizeof(tss));
 
+  //0x10EC 리얼텍 제조사 번호, 0x8139 8139모델번호.
+  pci_scan_bus();
+  struct pci_device device = pci_get_device(0x10EC, 0x8139);
+  print("Device found: ");
+  print_hex(device.vendor_id);
+  print(" ");
+  print_hex(device.device_id);
+  print("\n");
+
+  ft_memset(&tss, 0x00, sizeof(tss));
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
   tss.esp0 = 0x600000;
   tss.ss0 = MYOS_KERNEL_DATA_SELECTOR;
   tss_load(0x28);
-
   file_system_init();
 
   disk_search_and_init();
@@ -88,6 +98,7 @@ void kernel_main()
 
   struct process *process = 0;
   int res = process_load("0:/shell.bin", &process);
+  print("1\n");
   if (res < 0)
   {
     panic("process_load failed!\n");
