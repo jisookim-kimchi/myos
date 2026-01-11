@@ -312,10 +312,14 @@ WRAP모드 : 패킷을 끊지 않고 연속으로 저장하는거 그래서 + 15
 qemu-system-i386 -hda ./myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap
 
 # Ethernet 프레임 - 편지.
-[받는이 MAC Addr] [보내는이 MAC Addr] [편지종류 프레임 타입] [데이터]
- 6byte +          6byte +           2byte +           maximum.1500byte
+이더넷은 랜선으로 데이터를 전송하는 프로토콜이라 생각하면됨 그러니까,,,
+LAN(Local Area Network) 내에서 데이터를 전송하는 프로토콜.
+광역 X 지역.
+와이파이랑 다름!
+받는이 MAC Addr    보내는이 MAC Addr    편지종류 프레임 타입    데이터
+ 6byte +          6byte +             2byte +              maximum.1500byte
 
-ARP인 경우 이구조.
+## ARP(Address Resolution Protocol)인 경우 이구조.
  ------Ethernet Frame-------------
 |                                |  
 |    Ethernet Header(14bytes)    |
@@ -341,7 +345,7 @@ ARP : IP주소 -> MAC 주소변환. 왜? 이더넷은 MAC주소로 통신함. �
 아이거할때 리틀엔디안에서 빅엔디안으로 안바꿔서 작동안됨...
 
 
-//ip 인경우
+## ip(Internet Protocol) 인경우
 ------Ethernet Frame---------------------
 |    Ethernet Header(14bytes)           |
 |    [dest 6] [src 6] [type 2(0x0800)]  |
@@ -360,6 +364,9 @@ IP :  실제 데이터 전송! L3(layer)
 -프로토콜 (TCP, UDP, ICMP...)
 -데이터(페이로드)
 
+
+## ICMP(Internet Control Message Protocol)
+ICMP : IP 데이터그램이 전송, 수신, 또는 라우팅에 실패했을 때의 정보를 전달하는 프로토콜.
 
 bits.h :
 네트워크 : 빅엔디안
