@@ -299,9 +299,71 @@ plug and play 방식 일단 꽃으면 자리는 (BIOS/OS)가 비어있는 곳 �
 이제 0xC000번지로 데이터를 보내면 랜카드가 받음.
 참고로 우리랜카드는 rtl8139씀.
 
+# rtl8139
+
+rtl8139 네트워크 드라이버.
+PCI버스를 통해 장치를 탐지하고 패킷 송수신 가능.
+rtl8139.h 참조바람.
+패킷 전송 (TX) - 4개 슬롯. 라운드로빈
+패킷 수신 (RX) - WRAP모드 사용.
+WRAP모드 : 패킷을 끊지 않고 연속으로 저장하는거 그래서 + 1500 했음. 구현이 간단하기때문에, 물론 메모리 더필요...
+
+패킷 테스트하기 위해 wireshark 필요.
+qemu-system-i386 -hda ./myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap
+
+# Ethernet 프레임 - 편지.
+[받는이 MAC Addr] [보내는이 MAC Addr] [편지종류 프레임 타입] [데이터]
+ 6byte +          6byte +           2byte +           maximum.1500byte
+
+ARP인 경우 이구조.
+ ------Ethernet Frame-------------
+|                                |  
+|    Ethernet Header(14bytes)    |
+|    [dest 6bytes] [src 6bytes]  |
+|    [type(0x0806) 2bytes]       |
+|--------------------------------|  
+|                                |
+|    ARP Packet(28bytes)         |
+|    [hardware type 2bytes]      |
+|    [protocol type 2bytes]      |
+|    [hardware len 1byte]        |
+|    [protocol len 1byte]        |
+|    [operation 2bytes]          |
+|    [sender mac 6bytes]         |
+|    [sender ip 4bytes]          |
+|    [target mac 6bytes]         |
+|    [target ip 4bytes]          |
+|--------------------------------|
+
+ARP : IP주소 -> MAC 주소변환. 왜? 이더넷은 MAC주소로 통신함. 즉 L2(layer)
+연락처 앱으로 생각해 (우리는 무조건 이걸로  전화할때나 문자할때나 모든 통신에서 공유한다.)
+근데 우리는 IP주소만 알아... ->MAC주소 알아내야 함!
+아이거할때 리틀엔디안에서 빅엔디안으로 안바꿔서 작동안됨...
+
+
+//ip 인경우
+------Ethernet Frame---------------------
+|    Ethernet Header(14bytes)           |
+|    [dest 6] [src 6] [type 2(0x0800)]  |
+----------------------------------------
+|     IP header(20bytes)                |
+     [version] [len] [ TTL] [protocol]  |  TTL : time to live 패킷의 유효기간!
+|    [src ip4] [dest ip4]               |
+|-------------------------------------- |
+|     DATA (TCP/UDP/ICMP packet)        |
+|    (크기 다양)                         |
+----------------------------------------
 
 
 
+IP :  실제 데이터 전송! L3(layer)
+-출발지 ip
+-도착지 ip
+-프로토콜 (TCP, UDP, ICMP...)
+-데이터(페이로드)
 
-
+bits.h :
+네트워크 : 빅엔디안
+cpu : 리틀엔디안
+비트 순서가 달라서 ntohs, ntohl 함수를 사용합니다.
 

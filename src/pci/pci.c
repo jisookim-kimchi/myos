@@ -93,6 +93,14 @@ void pci_scan_bus()
   }
 }
 
+//0000 0100  : DMA(Direct Memory Access) enable - Lan card can access RAM directly without CPU
+static void pci_enable_bus_master(uint8_t bus, uint8_t slot, uint8_t func)
+{
+    uint16_t command = pci_read_word(bus, slot, func, 0x04);
+    command |= 0x04;
+    pci_write_word(bus, slot, func, 0x04, command);
+}
+
 struct pci_device pci_get_device(uint16_t vendor_id, uint16_t device_id)
 {
     struct pci_device device = {0};
@@ -107,11 +115,10 @@ struct pci_device pci_get_device(uint16_t vendor_id, uint16_t device_id)
                 device.sub_device = 0;
                 device.vendor_id = vendor_id;
                 device.device_id = device_id;
-                uint32_t port_addr = pci_read_dword(bus, slot, 0, 0x10);
+                uint32_t port_addr = pci_read_dword(bus, slot, 0, 0x10); //BAR0 : Base Address Register 0, 101호 직통번호..
                 device.port_addr = port_addr & 0xFFFFFFFC;
-                uint16_t command = pci_read_word(bus, slot, 0, 0x04);
-                command |= 0x04;
-                pci_write_word(bus, slot, 0, 0x04, command);
+                device.irq = pci_read_word(bus, slot, 0, 0x3C) & 0xFF;
+                pci_enable_bus_master(device.bus, device.device, device.sub_device);
                 return device;
             }
         }

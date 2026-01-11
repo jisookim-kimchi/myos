@@ -14,6 +14,8 @@
 #include "task/process.h"
 #include "timer/timer.h"
 #include "pci/pci.h"
+#include "rtl8139_driver/rtl8139.h"
+#include "net/arp.h"
 
 void __attribute__((section(".entry"))) start(void)
 {
@@ -61,6 +63,32 @@ void kernel_main()
   print(" ");
   print_hex(device.device_id);
   print("\n");
+  rtl8139_init(device.port_addr);
+
+  // uint8_t *mac = rtl8139_get_mac();
+  // print("MAC Address: ");
+  // for (int i = 0; i < 6; i++)
+  // {
+  //   print_hex(mac[i]);
+  //   print(" ");
+  // }
+  // print("\n");
+
+  // rtl8139_register_irq(device.irq);
+  // print("IRQ : ");
+  // print_int(device.irq);
+  // print("\n");
+  // uint8_t test_packet[64] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};  // 브로드캐스트
+  // rtl8139_packet_send(device.port_addr, test_packet, 64);
+  // print("packet sent\n");
+
+  // IP 설정!
+  uint8_t my_ip[] = {10, 0, 2, 15};  // QEMU user network
+  rtl8139_set_ip(my_ip);
+  uint8_t target_ip_bytes[] = {10, 0, 2, 2};  // 10.0.2.2 (QEMU 게이트웨이)
+  uint32_t target_ip = *(uint32_t*)target_ip_bytes;
+  arp_request(device.port_addr, target_ip);
+  print("ARP request called\n");
 
   ft_memset(&tss, 0x00, sizeof(tss));
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
