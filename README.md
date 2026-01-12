@@ -366,6 +366,7 @@ IP :  실제 데이터 전송! L3(layer)
 
 
 ## ICMP(Internet Control Message Protocol)
+ping 프로토콜 : 연결이 되었는지 보내는 신호! ICMP패킷을 보냄 
 ICMP : IP 데이터그램이 전송, 수신, 또는 라우팅에 실패했을 때의 정보를 전달하는 프로토콜.
 
 bits.h :

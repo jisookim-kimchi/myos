@@ -33,6 +33,7 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/net/ethernet.o \
 		$(BUILD_DIR)/net/arp.o \
 		$(BUILD_DIR)/net/ip.o \
+		$(BUILD_DIR)/net/icmp.o \
 
 
 INCLUDES = -I$(SRC_DIR)/

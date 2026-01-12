@@ -2,7 +2,7 @@
 #include "../memory/memory.h"
 #include "../rtl8139_driver/rtl8139.h"
 #include "../bits.h"
-uint8_t ether_frame[1514];
+#include "ip.h"
 
 int ethernet_send(uint32_t port_addr,uint8_t *data, uint8_t *dest, uint8_t *src, uint16_t type, uint32_t len)
 {
@@ -30,7 +30,7 @@ int ethernet_receive(uint8_t *frame, uint32_t port_addr)
     uint16_t type = ntohs(header->type);
     if (type == ETH_TYPE_IP)
     {
-        //IP처리
+        ip_receive(port_addr, packet + ETH_HEADER_LEN, len - ETH_HEADER_LEN);
     }
     else if (type == ETH_TYPE_ARP)
     {
