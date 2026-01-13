@@ -19,7 +19,7 @@ void ip_send(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t dest, uin
     header.header_checksum = 0;
     ft_memcpy(&header.src, rtl8139_get_ip(), 4);
     ft_memcpy(&header.dst, &dest, 4);
-    header.header_checksum = ip_checksum(&header, sizeof(struct ip_header));
+    header.header_checksum = checksum(&header, sizeof(struct ip_header));
 
     uint8_t frame[ETH_HEADER_LEN + sizeof(struct ip_header) + len];
     struct ethernet_header *eth_header = (struct ethernet_header*)frame;
@@ -32,9 +32,9 @@ void ip_send(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t dest, uin
 }
 
 // receiver should check like this... 
-// if (data(header) + checksum = 1111....) ok, else error
+// if (data(header) + checksum = 1111.... or 0) ok, else error
 // so we have to return reversed result.
-uint16_t ip_checksum(void *data, int len)
+uint16_t checksum(void *data, int len)
 {
     uint32_t sum = 0;
     uint16_t *ptr = (uint16_t*)data;
@@ -57,7 +57,7 @@ uint16_t ip_checksum(void *data, int len)
 void ip_receive(uint32_t port_addr, uint8_t *data, int len)
 {
     struct ip_header *header = (struct ip_header*)data;
-    if (header->header_checksum != ip_checksum(header, sizeof(struct ip_header)))
+    if (header->header_checksum != checksum(header, sizeof(struct ip_header)))
     {
         print("IP checksum error\n");
         return;

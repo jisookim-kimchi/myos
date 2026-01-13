@@ -16,6 +16,7 @@
 #include "pci/pci.h"
 #include "rtl8139_driver/rtl8139.h"
 #include "net/arp.h"
+#include "net/icmp.h"
 
 void __attribute__((section(".entry"))) start(void)
 {
@@ -89,6 +90,17 @@ void kernel_main()
   uint32_t target_ip = *(uint32_t*)target_ip_bytes;
   arp_request(device.port_addr, target_ip);
   print("ARP request called\n");
+
+  uint8_t ping_data[8];
+  struct icmp_header *icmp = (struct icmp_header*)ping_data;
+  icmp->type = 8;
+  icmp->code = 0;
+  icmp->id = 1;
+  icmp->sequence = 1;
+  icmp->checksum = 0;
+  for (volatile int i = 0; i < 1000000; i++) { }
+  icmp_send(device.port_addr, ping_data, 8, target_ip, ICMP_ECHO_REQUEST);
+  print("Ping sent!\n");
 
   ft_memset(&tss, 0x00, sizeof(tss));
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]

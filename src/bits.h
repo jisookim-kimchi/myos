@@ -15,7 +15,7 @@ static inline uint16_t ntohs(uint16_t netshort)
 // little endian to big endian (16bits)
 static inline uint16_t htons(uint16_t hostshort)
 {
-    return (hostshort >> 8) | (hostshort << 8);
+    return ntohs(hostshort);
 }
 
 // big endian to little endian (32bits)
@@ -26,6 +26,11 @@ static inline uint32_t ntohl(uint32_t netlong)
            ((netlong >> 8) & 0xFF00) |
            ((netlong << 8) & 0xFF0000) |
            ((netlong << 24) & 0xFF000000);
+}
+
+static inline uint32_t htonl(uint32_t hostlong)
+{
+    return ntohl(hostlong);
 }
 
 #endif

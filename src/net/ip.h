@@ -28,5 +28,5 @@ struct ip_header
 
 void ip_send(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t dest, uint32_t protocol);
 void ip_receive(uint32_t port_addr, uint8_t *data, int len);
-uint16_t ip_checksum(void *data, int len);
+uint16_t checksum(void *data, int len);
 #endif
