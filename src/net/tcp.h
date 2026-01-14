@@ -1,6 +1,7 @@
 #ifndef TCP_H
 #define TCP_H
-#define MAX_SOCKET_CACHE 10
+
+#define MAX_SOCKET_ID 10
 
 #include <stdint.h>
 
@@ -19,6 +20,26 @@
 
 #define MAX_TCP_BUF_SIZE 4096
 
+
+
+/*
+    TCP_CLOSED       : no connection
+    TCP_LISTEN       : server waiting for connection
+    TCP_SYN_SENT     : client sent SYN, waiting for SYN-ACK
+    TCP_SYN_RECEIVED : server received SYN, sent SYN-ACK
+    TCP_ESTABLISHED  : connection ok!, data transfer possible
+    TCP_FIN_WAIT     : snent FIN, waiting for other side to close
+*/
+enum tcp_state
+{
+    TCP_CLOSED,
+    TCP_LISTEN,
+    TCP_SYN_SENT,
+    TCP_SYN_RECEIVED,
+    TCP_ESTABLISHED,
+    TCP_FIN_WAIT
+};
+
 /*
     sequence number :  order number
     acknowledgment number : next expected number(acknowledgment)
@@ -31,25 +52,14 @@
     data offset and reserved share the same byte so total 1 byte
     and flags share the same byte so total 2 bytes
 */
-
-enum tcp_state
-{
-    TCP_CLOSED,
-    TCP_LISTEN,
-    TCP_SYN_SENT,
-    TCP_SYN_RECEIVED,
-    TCP_ESTABLISHED,
-    TCP_FIN_WAIT
-};
-
 struct tcp_header
 {
     uint16_t src_port;
     uint16_t dst_port;
     uint32_t sequence_number;
     uint32_t acknowledgment_number;
-    uint8_t data_offset:4;
     uint8_t reserved:4;
+    uint8_t data_offset:4;
     uint8_t flags;
     uint16_t window_size;
     uint16_t checksum;
@@ -89,4 +99,10 @@ void tcp_send(uint32_t port_addr, struct tcp_socket *socket, uint8_t flags, uint
 void tcp_receive(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t src_ip);
 void tcp_server_handler(uint32_t port_addr, struct tcp_header *header, uint32_t client_ip);
 void tcp_client_handler(uint32_t port_addr, struct tcp_header *header, uint32_t server_ip);
+void tcp_test_connect(uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port);
+
+int tcp_socket(void);
+int tcp_connect(int socketid, uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port);
+int tcp_write(int socketid, uint32_t port_addr, uint8_t *data, uint32_t len);
+int tcp_close(int socketid, uint32_t port_addr);
 #endif

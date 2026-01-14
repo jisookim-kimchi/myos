@@ -4,8 +4,6 @@
 #include "../idt/idt.h"
 #include <stdint.h>
 
-extern uint32_t timer_ticks;
-
 void timer_init(int freq);
 void timer_handle_interrupt(struct interrupt_frame *frame);
 uint32_t get_tick();

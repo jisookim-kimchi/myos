@@ -5,8 +5,10 @@
 #include "../rtl8139_driver/rtl8139.h" 
 #include "../kernel_print.h"
 #include "../timer/timer.h"
+#include <stdbool.h>
 
-static struct socket_cache socket_cache[MAX_SOCKET_CACHE];
+static struct socket_cache socket_cache[MAX_SOCKET_ID];
+static bool socket_used[MAX_SOCKET_ID] = {0};
 static int socket_count = 0;
 /*
     TCP checksum = ip tile + tcp
@@ -72,22 +74,49 @@ void tcp_receive(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t src_i
         print("TCP checksum error\n");
         return;
     }
-    uint16_t dst_port = ntohs(tcp->dst_port);
-    uint16_t src_port = ntohs(tcp->src_port);
-    
-    // we are the server we were asked for connection
     if (tcp->flags & TCP_SYN)
     {
         tcp_server_handler(port_addr, tcp, src_ip);
+        return;
     }
-    //we are the clinet, we asked for connection
-    else if (tcp->flags & TCP_ACK)
+    if (tcp->flags & TCP_FIN)
+    {
+        for (int i = 0; i < MAX_SOCKET_ID; i++)
+        {
+            if (socket_used[i] && 
+                socket_cache[i].socket.dst_ip == src_ip && 
+                socket_cache[i].socket.dst_port == ntohs(tcp->src_port))
+            {
+                // 우리가 FIN_WAIT 상태면 → CLOSED
+                if (socket_cache[i].socket.state == TCP_FIN_WAIT)
+                {
+                    socket_cache[i].socket.state = TCP_CLOSED;
+                    tcp_send(port_addr, &socket_cache[i].socket, TCP_ACK, NULL, 0);
+                    socket_used[i] = false;
+                    socket_count--;
+                }
+                // ESTABLISHED 상태면 → 서버가 먼저 종료
+                else if (socket_cache[i].socket.state == TCP_ESTABLISHED)
+                {
+                    tcp_send(port_addr, &socket_cache[i].socket, TCP_ACK, NULL, 0);
+                    socket_cache[i].socket.state = TCP_CLOSED;
+                    socket_used[i] = false;
+                    socket_count--;
+                }   
+                return;
+            }
+        }
+    }
+
+    if (tcp->flags & TCP_PSH)
+    {
+        // recv_buf에 저장
+        // TODO: 구현
+    }
+
+    if (tcp->flags & TCP_ACK)
     {
         tcp_client_handler(port_addr, tcp, src_ip);
-    }
-    else
-    {
-
     }
 }
 
@@ -105,19 +134,21 @@ void tcp_server_handler(uint32_t port_addr, struct tcp_header *header, uint32_t 
     socket.dst_ip = client_ip;
     socket.src_port = server_port;
     socket.dst_port = client_port;
-    socket.seq = timer_ticks * 1000;
+    socket.seq = get_tick() * 1000;
     socket.ack = client_seq + 1;
     socket.state = TCP_SYN_SENT;
 
     struct socket_cache *cache = &socket_cache[socket_count];
-    cache->socket = socket;
+    ft_memcpy(&cache->socket, &socket, sizeof(struct tcp_socket));
     socket_count++;
 
     tcp_send(port_addr, &socket, TCP_SYN | TCP_ACK, NULL, 0);
 }
 
+// client want to connect to server 
 void tcp_client_handler(uint32_t port_addr, struct tcp_header *header, uint32_t server_ip)
 {
+    print("CLIENT HANDLER\n");
     for (int i = 0; i < socket_count; i++)
     {
         struct socket_cache *cache = &socket_cache[i];
@@ -132,4 +163,98 @@ void tcp_client_handler(uint32_t port_addr, struct tcp_header *header, uint32_t 
     }
 }
 
-//need to create socket function.
+
+void tcp_test_connect(uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port)
+{
+    struct socket_cache *cache = &socket_cache[socket_count++];
+    
+    cache->socket.src_ip = *(uint32_t*)rtl8139_get_ip();
+    cache->socket.dst_ip = dst_ip;
+    cache->socket.src_port = 12345;
+    cache->socket.dst_port = dst_port;
+    cache->socket.seq = get_tick() * 1000;
+    cache->socket.ack = 0;
+    cache->socket.state = TCP_SYN_SENT;
+    tcp_send(port_addr, &cache->socket, TCP_SYN, NULL, 0);
+}
+
+int tcp_socket()
+{
+    for (int i = 0; i < MAX_SOCKET_ID; i++)
+    {
+        if (!socket_used[i])
+        {
+            socket_used[i] = true;
+            socket_cache[i].socket.state = TCP_CLOSED;
+            socket_count++;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/*
+    asking connection to server
+    next_port : 
+    49152 ~ 65535 : dynamic port
+    1024 ~ 49151 : registered port
+    to distinguish multi connections whe receiving replies from servers.
+    each connection needs a unique src_ip, src_port, dst_ip, dst_port.
+*/
+int tcp_connect(int socketid, uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port)
+{
+    if (socketid < 0 || socketid >= MAX_SOCKET_ID || !socket_used[socketid])
+    {
+        return -1;
+    }
+    
+    struct socket_cache *cache = &socket_cache[socketid];
+    static uint16_t next_port = 4915;
+
+    cache->socket.src_ip = *(uint32_t*)rtl8139_get_ip();
+    cache->socket.dst_ip = dst_ip;
+    cache->socket.src_port = next_port++;
+    if (next_port > 49152)
+        next_port = 4915;
+
+    cache->socket.dst_port = dst_port;
+    cache->socket.seq = get_tick() * 1000;
+    cache->socket.ack = 0;
+    cache->socket.state = TCP_SYN_SENT;
+    tcp_send(port_addr, &cache->socket, TCP_SYN, NULL, 0);
+    return 0;
+}
+
+//write data to socket
+int tcp_write(int socketid, uint32_t port_addr, uint8_t *data, uint32_t len)
+{
+    if (socketid < 0 || socketid >= MAX_SOCKET_ID || !socket_used[socketid])
+    {
+        return -1;
+    }
+    struct socket_cache *cache = &socket_cache[socketid];
+    if (cache->socket.state != TCP_ESTABLISHED)
+    {
+        return -1;
+    }
+    tcp_send(port_addr, &cache->socket, TCP_PSH, data, len);
+    cache->socket.seq += len;
+    return len;
+}
+
+int tcp_close(int socketid, uint32_t port_addr)
+{
+    if (socketid < 0 || socketid >= MAX_SOCKET_ID || !socket_used[socketid])
+    {
+        return -1;
+    }
+    
+    struct socket_cache *cache = &socket_cache[socketid];
+    if (cache->socket.state != TCP_ESTABLISHED)
+    {
+        return -1;
+    }
+    cache->socket.state = TCP_FIN_WAIT;
+    tcp_send(port_addr, &cache->socket, TCP_FIN | TCP_ACK, NULL, 0);
+    return 0;
+}

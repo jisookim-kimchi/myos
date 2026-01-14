@@ -376,6 +376,8 @@ cpu : 리틀엔디안
 근데 이거 좀 테스트할때 많이 놓침... 그래서 wireshark로 확인할때 안뜨는 경우 종종 있었음.
 
 ## TCP(Telecommunication Protocol)
+little-endian 시스템에선 비트가 오른쪽에서 왼쪽으로 채워짐.
+구조체 선언 순서와 실제 메모리 배치가반대!
 ethernet | ip | tcp | data
 14         20    20   max 1500
 
@@ -399,3 +401,5 @@ segments = TCP 헤더 + 데이터
 ### 3-way-handshake
 데이터 없음.
 연결만 확인하는것!
+
+error 작동안됨. 2-way로 보임.현재...

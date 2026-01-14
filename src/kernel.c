@@ -17,6 +17,7 @@
 #include "rtl8139_driver/rtl8139.h"
 #include "net/arp.h"
 #include "net/icmp.h"
+#include "net/tcp.h"
 
 void __attribute__((section(".entry"))) start(void)
 {
@@ -101,6 +102,17 @@ void kernel_main()
   for (volatile int i = 0; i < 1000000; i++) { }
   icmp_send(device.port_addr, ping_data, 8, target_ip, ICMP_ECHO_REQUEST);
   print("Ping sent!\n");
+
+  int sock = tcp_socket();
+  tcp_connect(sock, device.port_addr, target_ip, 80);
+  for (volatile int i = 0; i < 10000000; i++) { }
+
+  tcp_write(sock, device.port_addr, (uint8_t*)"GET / HTTP/1.1\r\nHost: 10.0.2.2\r\n\r\n", 35);
+
+  for (volatile int i = 0; i < 10000000; i++) { }
+  tcp_close(sock, device.port_addr);
+
+
 
   ft_memset(&tss, 0x00, sizeof(tss));
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
