@@ -28,8 +28,8 @@ extern uint32_t get_faulting_address();
 
 int idt_register_interrupt_callback(int interrupt, INTERRUPT_CALLBACK_FUNCTION interrupt_callback)
 {
-    if (interrupt < 0 || interrupt >= MYOS_TOTAL_INTERRUPTS)
-    {
+  if (interrupt < 0 || interrupt >= MYOS_TOTAL_INTERRUPTS)
+  {
     return -1;
   }
   interrupt_callbacks[interrupt] = interrupt_callback;
@@ -51,46 +51,39 @@ void idt_zero()
 
 void page_fault_handler(struct interrupt_frame* frame)
 {
-    uint32_t faulting_address = get_faulting_address();
-    struct process* proc = get_cur_process();
+  uint32_t faulting_address = get_faulting_address();
+  struct process* proc = get_cur_process();
 
-    // safety: only map addresses if they are within valid user ranges (program or stack)
-    // programmer's safety net: prevent lazy paging from exhausting RAM on infinite fault loops.
-    bool valid = (faulting_address >= MYOS_PROGRAM_VIRTUAL_ADDRESS && faulting_address < 0x20000000);
+
+  bool valid = (faulting_address >= MYOS_PROGRAM_VIRTUAL_ADDRESS && faulting_address < 0x20000000);
     
-    if (!valid || !proc)
-    {
-        print("segmentation fault : ");
-        print_hex(faulting_address);
-        print(" IP: ");
-        print_hex(frame->ip);
-        print("\n");
-        // In a real OS, we'd kill the process. For now, panic helps debugging.
-        panic("segmentation fault (out of bounds access)");
-    }
+  if (!valid || !proc)
+  {
+    panic("segmentation fault (out of bounds access)");
+  }
 
-    void* page = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
-    if (!page)
-    {
-        panic("page_fault_handler() failed to allocate page");
-    }
+  void* page = kernel_zero_alloc(PAGING_PAGE_SIZE_BYTES);
+  if (!page)
+  {
+    panic("page_fault_handler() failed to allocate page");
+  }
 
-    uint32_t aligned_addr = faulting_address & 0xFFFFF000;
-    int res = paging_map(proc->task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
-    if (res < 0)
-    {
-        panic("page_fault_handler() failed to map page");
-    }
+  uint32_t aligned_addr = faulting_address & 0xFFFFF000;
+  int res = paging_map(proc->task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
+  if (res < 0)
+  {
+    panic("page_fault_handler() failed to map page");
+  }
 }
 
 void idt_set(int interrupt_number, void *address)
 {
   struct idt_descriptor *idt = &idt_desc[interrupt_number];
-    idt->bottom_offset = (uint32_t)address & 0x0000FFFF;  // 하위 16비트
+  idt->bottom_offset = (uint32_t)address & 0x0000FFFF;  // 하위 16비트
   idt->selector = MYOS_KERNEL_CODE_SELECTOR;
   idt->zero = 0;
   idt->type_attr = 0xEE; // 11101110b : present, ring 0, 32-bit interrupt gate
-    idt->top_offset = (uint32_t)address >> 16;            // 상위 16비트
+  idt->top_offset = (uint32_t)address >> 16;            // 상위 16비트
 }
 
 void idt_init()
@@ -98,15 +91,15 @@ void idt_init()
   ft_memset(idt_desc, 0, sizeof(idt_desc));
 
   idtr_descriptor.limit = sizeof(idt_desc) - 1;
-    idtr_descriptor.base = (uint32_t) idt_desc;
+  idtr_descriptor.base = (uint32_t) idt_desc;
 
-    for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
-    {
+  for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
+  {
     idt_set(i, interrupt_table[i]);
   }
 
-    for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
-    {
+  for (int i = 0; i < MYOS_TOTAL_INTERRUPTS; i++)
+  {
     idt_register_interrupt_callback(i, no_interrupts_handler);
   }
   // idt_set(0, idt_zero);
@@ -126,33 +119,33 @@ void idt_init()
 //함수배열에 함수를 넣고
 void isr80h_register_command(int ask_id, ISR80_COMMAND command)
 {
-    if (ask_id < 0 || ask_id >= MYOS_MAX_ISR80H_COMMANDS)
-    {
-        panic("isr80h_register_command(): command is out of bounds\n");
-    }
+  if (ask_id < 0 || ask_id >= MYOS_MAX_ISR80H_COMMANDS)
+  {
+    panic("isr80h_register_command(): command is out of bounds\n");
+  }
 
-    if (isr80h_commands[ask_id])
-    {
-        panic("isr80h_register_command(): attempting to overwrite an existing command\n");
-    }
-    isr80h_commands[ask_id] = command;
+  if (isr80h_commands[ask_id])
+  {
+    panic("isr80h_register_command(): attempting to overwrite an existing command\n");
+  }
+  isr80h_commands[ask_id] = command;
 }
 
 //함수배열에 들어있는 element를 가져와서 실행.
 void *isr80h_handle_command(int ask, struct interrupt_frame* frame)
 {
   // TODO: Implement system call handling based on 'ask' value
-    if (ask < 0 || ask >= MYOS_MAX_ISR80H_COMMANDS)
-    {
-        return NULL;
-    }
+  if (ask < 0 || ask >= MYOS_MAX_ISR80H_COMMANDS)
+  {
+    return NULL;
+  }
 
-    ISR80_COMMAND command_func = isr80h_commands[ask];
-    if(!command_func)
-    {
-        return NULL;
-    }
-    return command_func(frame);
+  ISR80_COMMAND command_func = isr80h_commands[ask];
+  if(!command_func)
+  {
+    return NULL;
+  }
+  return command_func(frame);
 }
 
 //1.page directory change to kernel page.
@@ -161,19 +154,19 @@ void *isr80h_handle_command(int ask, struct interrupt_frame* frame)
 //4.again recovery to user page.
 void isr80h_handler(struct interrupt_frame* frame)
 {
-    void* res = NULL;
-    int ask = frame->eax; // System call command is in EAX
-    paging_switch_to_kernel();
-    save_registers(frame);
+  void* res = NULL;
+  int ask = frame->eax; // System call command is in EAX
+  paging_switch_to_kernel();
+  save_registers(frame);
 
-    res = isr80h_handle_command(ask, frame);
-    frame->eax = (uint32_t)(uintptr_t)res;
+  res = isr80h_handle_command(ask, frame);
+  frame->eax = (uint32_t)(uintptr_t)res;
 
-    struct task* t = get_cur_task();
-    if (t)
-    {
-        paging_switch(t->page_directory);
-    }
+  struct task* t = get_cur_task();
+  if (t)
+  {
+    paging_switch(t->page_directory);
+  }
 
 }
 
@@ -182,23 +175,23 @@ void isr80h_handler(struct interrupt_frame* frame)
 //otherwise return the original frame
 void interrupt_handler(struct interrupt_frame* frame)
 {
-    int interrupt = frame->vector_number;
+  int interrupt = frame->vector_number;
 
-    //EOI send to PIC
-    // Acknowledge hardware interrupts BEFORE calling the callback.
-    // This is vital because if the callback switches tasks (like the timer), 
-    // it never returns to this function, and the PIC would remain blocked.
-    if (interrupt >= 0x20 && interrupt < 0x30)
+  //EOI send to PIC
+  // Acknowledge hardware interrupts BEFORE calling the callback.
+  // This is vital because if the callback switches tasks (like the timer), 
+  // it never returns to this function, and the PIC would remain blocked.
+  if (interrupt >= 0x20 && interrupt < 0x30)
+  {
+    outsb(0x20, 0x20); // Master PIC EOI
+    if (interrupt >= 0x28)
     {
-        outsb(0x20, 0x20); // Master PIC EOI
-        if (interrupt >= 0x28)
-        {
-            outsb(0xA0, 0x20); // Slave PIC EOI
-        }
+      outsb(0xA0, 0x20); // Slave PIC EOI
     }
+  }
 
-    if (interrupt_callbacks[interrupt] != 0)
-    {
-        interrupt_callbacks[interrupt](frame);
-    }
+  if (interrupt_callbacks[interrupt] != 0)
+  {
+    interrupt_callbacks[interrupt](frame);
+  }
 }

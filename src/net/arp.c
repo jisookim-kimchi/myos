@@ -29,13 +29,13 @@ void arp_request(uint32_t port_addr,uint32_t target_ip)
 void arp_receive(uint32_t port_addr, uint8_t *data, int len)
 {
     struct arp_header *h_arp = (struct arp_header*)data;
-    if (h_arp->operation == ARP_OP_REPLY)
+    if (ntohs(h_arp->operation) == ARP_OP_REPLY)
     {
         uint32_t sender_ip;
         ft_memcpy(&sender_ip, h_arp->sender_ip, ETH_IP_LEN);
         arp_cache_add(sender_ip, h_arp->sender_mac);
     }
-    else if (h_arp->operation == ARP_OP_REQUEST)
+    else if (ntohs(h_arp->operation) == ARP_OP_REQUEST)
     {
         uint32_t target;
         ft_memcpy(&target, h_arp->target_ip, ETH_IP_LEN);

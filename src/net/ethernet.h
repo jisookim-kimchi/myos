@@ -20,6 +20,6 @@ struct ethernet_header
 }__attribute__((packed));
 
 int ethernet_send(uint32_t port_addr,uint8_t *data, uint8_t *dest, uint8_t *src, uint16_t type, uint32_t len);
-int ethernet_receive(uint8_t *frame, uint32_t port_addr);
+int ethernet_receive(uint8_t *frame, uint32_t port_addr, uint32_t len);
 
 #endif

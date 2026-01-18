@@ -4,6 +4,7 @@
 #define MAX_SOCKET_ID 10
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
     FIN : connection close
@@ -18,7 +19,7 @@
 #define TCP_PSH 0x08
 #define TCP_ACK 0x10
 
-#define MAX_TCP_BUF_SIZE 4096
+#define MAX_TCP_BUF_SIZE 16384
 
 
 
@@ -85,6 +86,7 @@ struct tcp_socket
     uint32_t ack;
     uint8_t send_buf[MAX_TCP_BUF_SIZE];
     uint8_t recv_buf[MAX_TCP_BUF_SIZE];
+    uint32_t recv_len;
     enum tcp_state state;
 };
 
@@ -105,4 +107,8 @@ int tcp_socket(void);
 int tcp_connect(int socketid, uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port);
 int tcp_write(int socketid, uint32_t port_addr, uint8_t *data, uint32_t len);
 int tcp_close(int socketid, uint32_t port_addr);
+
+extern struct socket_cache socket_cache[MAX_SOCKET_ID];
+extern bool socket_used[MAX_SOCKET_ID];
+
 #endif

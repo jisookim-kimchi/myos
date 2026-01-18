@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+// Forward declaration
+struct interrupt_frame;
+
 /***********************
     Register Offsets
 ***********************/
@@ -67,7 +70,7 @@ struct rtl8139_device
 
 void rtl8139_init(uint32_t port_addr);
 void rtl8139_read_mac(uint32_t port_addr, uint8_t *mac);
-void rtl8139_handler(uint32_t port_addr);
+void rtl8139_handler(struct interrupt_frame* frame); 
 void rtl8139_register_irq(uint8_t irq);
 int rtl8139_packet_receive(uint32_t port_addr, uint8_t **out_data);
 int rtl8139_packet_send(uint32_t port_addr, void *data, uint32_t length);

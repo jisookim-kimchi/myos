@@ -5,13 +5,17 @@
 void icmp_receive(uint32_t port_addr, uint8_t *data, int len, uint32_t src_ip)
 {
     struct icmp_header *header = (struct icmp_header*)data;
-    uint16_t sum = 0;
-    sum = checksum(data, len);
-    if (sum != 0 && sum != 0xFFFF)
-    {
-        print("ICMP checksum error\n");
-        return;
-    }
+    
+   uint16_t received_checksum = header->checksum;
+   header->checksum = 0;
+   uint16_t calculated = checksum(data, len);
+   header->checksum = received_checksum;
+   if (calculated != received_checksum)
+   {
+    print("ICMP checksum error\n");
+    return;
+   }
+    
     if (header->type == ICMP_ECHO_REQUEST)
     {
         icmp_send(port_addr, data, len, src_ip, ICMP_ECHO_REPLY);

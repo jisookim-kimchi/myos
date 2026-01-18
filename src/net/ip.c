@@ -3,8 +3,10 @@
 #include "../rtl8139_driver/rtl8139.h"
 #include "../memory/memory.h"
 #include "ethernet.h"
-#include "../kernel_print.h"
 #include "icmp.h"
+#include "tcp.h"
+#include "arp.h"
+#include "../kernel_print.h"
 
 void ip_send(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t dest, uint32_t protocol)
 {
@@ -21,14 +23,17 @@ void ip_send(uint32_t port_addr, uint8_t *data, uint32_t len, uint32_t dest, uin
     ft_memcpy(&header.dst, &dest, 4);
     header.header_checksum = checksum(&header, sizeof(struct ip_header));
 
-    uint8_t frame[ETH_HEADER_LEN + sizeof(struct ip_header) + len];
-    struct ethernet_header *eth_header = (struct ethernet_header*)frame;
-    ft_memcpy(eth_header->dest, rtl8139_get_mac(), 6);
-    ft_memcpy(eth_header->sender, rtl8139_get_mac(), 6);
-    eth_header->type = htons(ETH_TYPE_IP);
-    ft_memcpy(frame + ETH_HEADER_LEN, &header, sizeof(struct ip_header));
-    ft_memcpy(frame + ETH_HEADER_LEN + sizeof(struct ip_header), data, len);
-    rtl8139_packet_send(port_addr, frame, ETH_HEADER_LEN + sizeof(struct ip_header) + len);
+    uint8_t frame_data[sizeof(struct ip_header) + len];
+    ft_memcpy(frame_data, &header, sizeof(struct ip_header));
+    ft_memcpy(frame_data + sizeof(struct ip_header), data, len);
+
+    uint8_t *dest_mac = arp_cache_lookup(dest);
+    if (!dest_mac)
+    {
+        dest_mac = (uint8_t*)broadcast;
+        arp_request(port_addr, dest);
+    }
+    ethernet_send(port_addr, frame_data, dest_mac, rtl8139_get_mac(), ETH_TYPE_IP, sizeof(struct ip_header) + len);
 }
 
 // receiver should check like this... 
@@ -57,20 +62,30 @@ uint16_t checksum(void *data, int len)
 void ip_receive(uint32_t port_addr, uint8_t *data, int len)
 {
     struct ip_header *header = (struct ip_header*)data;
-    if (header->header_checksum != checksum(header, sizeof(struct ip_header)))
+    uint16_t received_checksum = header->header_checksum;
+    
+    header->header_checksum = 0;
+    uint16_t calculated = checksum(header, sizeof(struct ip_header));
+    header->header_checksum = received_checksum;  // Restore original
+
+    if (calculated != received_checksum)
     {
         print("IP checksum error\n");
         return;
     }
+
+    uint16_t ip_total_len = ntohs(header->total_length);
+    uint32_t ip_header_len = (header->version_and_header_len & 0x0F) * 4;
+    uint32_t payload_len = ip_total_len - ip_header_len;
+
     if (header->protocol == IP_PROTO_ICMP)
     {
-        uint8_t *icmp_data = data + sizeof(struct ip_header);
-        int icmp_data_len = len - sizeof(struct ip_header);
-        icmp_receive(port_addr, icmp_data, icmp_data_len, header->src);
+        uint8_t *icmp_data = data + ip_header_len;
+        icmp_receive(port_addr, icmp_data, payload_len, header->src);
     }
     else if (header->protocol == IP_PROTO_TCP)
     {
-        //tcp 처리
+        tcp_receive(port_addr, data + ip_header_len, payload_len, header->src);
     }
     else if (header->protocol == IP_PROTO_UDP)
     {

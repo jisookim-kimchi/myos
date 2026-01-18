@@ -13,6 +13,7 @@
 #include "string/string.h"
 #include "task/process.h"
 #include "timer/timer.h"
+#include "io/io.h"
 #include "pci/pci.h"
 #include "rtl8139_driver/rtl8139.h"
 #include "net/arp.h"
@@ -60,11 +61,6 @@ void kernel_main()
   //0x10EC 리얼텍 제조사 번호, 0x8139 8139모델번호.
   pci_scan_bus();
   struct pci_device device = pci_get_device(0x10EC, 0x8139);
-  print("Device found: ");
-  print_hex(device.vendor_id);
-  print(" ");
-  print_hex(device.device_id);
-  print("\n");
   rtl8139_init(device.port_addr);
 
   // uint8_t *mac = rtl8139_get_mac();
@@ -76,7 +72,7 @@ void kernel_main()
   // }
   // print("\n");
 
-  // rtl8139_register_irq(device.irq);
+  rtl8139_register_irq(device.irq);
   // print("IRQ : ");
   // print_int(device.irq);
   // print("\n");
@@ -90,7 +86,6 @@ void kernel_main()
   uint8_t target_ip_bytes[] = {10, 0, 2, 2};  // 10.0.2.2 (QEMU 게이트웨이)
   uint32_t target_ip = *(uint32_t*)target_ip_bytes;
   arp_request(device.port_addr, target_ip);
-  print("ARP request called\n");
 
   uint8_t ping_data[8];
   struct icmp_header *icmp = (struct icmp_header*)ping_data;
@@ -103,13 +98,19 @@ void kernel_main()
   icmp_send(device.port_addr, ping_data, 8, target_ip, ICMP_ECHO_REQUEST);
   print("Ping sent!\n");
 
+  enable_interrupts();
+
   int sock = tcp_socket();
   tcp_connect(sock, device.port_addr, target_ip, 80);
-  for (volatile int i = 0; i < 10000000; i++) { }
+
+  for (volatile int i = 0; i < 30000000; i++) { }
 
   tcp_write(sock, device.port_addr, (uint8_t*)"GET / HTTP/1.1\r\nHost: 10.0.2.2\r\n\r\n", 35);
 
-  for (volatile int i = 0; i < 10000000; i++) { }
+  for (volatile int i = 0; i < 50000000; i++)
+  {
+    
+  }
   tcp_close(sock, device.port_addr);
 
 
@@ -156,7 +157,7 @@ void kernel_main()
     panic("process_load failed!\n");
   }
 
-  enable_interrupts();
+//   enable_interrupts(); // Moved up
   task_run_first_ever_task();
   while (1)
   {

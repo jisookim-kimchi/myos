@@ -79,51 +79,67 @@ void pci_scan_bus()
         uint16_t vendor_id = pci_read_word(bus, slot, 0, 0);
         if (vendor_id != 0xFFFF)//if not empty!
         {
-            uint16_t device_id = pci_read_word(bus, slot, 0, 2);
-            print("Found PCI Device Bus: ");
-            print_int(bus);
-            print(", Slot: ");
-            print_int(slot);
-            print(", Vendor: ");
-            print_hex(vendor_id);
-            print(", Device: ");
-            print_hex(device_id);
-            print("\n");
+          uint16_t device_id = pci_read_word(bus, slot, 0, 2);
+          print("Found PCI Device Bus: ");
+          print_int(bus);
+          print(", Slot: ");
+          print_int(slot);
+          print(", Vendor: ");
+          print_hex(vendor_id);
+          print(", Device: ");
+          print_hex(device_id);
+          print("\n");
         }
     }
   }
 }
 
-//0000 0100  : DMA(Direct Memory Access) enable - Lan card can access RAM directly without CPU
+//0000 0100  : DMA(Direct Memory Access) enable - Lan card can access RAM directly without using CPU
 static void pci_enable_bus_master(uint8_t bus, uint8_t slot, uint8_t func)
 {
-    uint16_t command = pci_read_word(bus, slot, func, 0x04);
-    command |= 0x04;
-    pci_write_word(bus, slot, func, 0x04, command);
+  uint16_t command = pci_read_word(bus, slot, func, 0x04);
+  // print("PCI: Original command = 0x");
+  // print_hex(command);
+  // print("\n");
+    
+  command |= 0x04;   // Enable Bus Master (DMA)
+  command &= ~0x400; // Clear bit 10 (Interrupt Disable) to ENABLE interrupts
+  
+  pci_write_word(bus, slot, func, 0x04, command);
+    
+  //uint16_t new_command = pci_read_word(bus, slot, func, 0x04);
+  // print("PCI: new command = 0x");
+  // print_hex(new_command);
+  // print("\n");
 }
 
 struct pci_device pci_get_device(uint16_t vendor_id, uint16_t device_id)
 {
-    struct pci_device device = {0};
-    for (int bus = 0; bus < 256; bus++)
+  struct pci_device device = {0};
+  for (int bus = 0; bus < 256; bus++)
+  {
+    for (int slot = 0; slot < 32; slot++)
     {
-        for (int slot = 0; slot < 32; slot++)
-        {
-            if (pci_read_word(bus, slot, 0, 0) == vendor_id && pci_read_word(bus, slot, 0, 2) == device_id)
-            {
-                device.bus = bus;
-                device.device = slot;
-                device.sub_device = 0;
-                device.vendor_id = vendor_id;
-                device.device_id = device_id;
-                uint32_t port_addr = pci_read_dword(bus, slot, 0, 0x10); //BAR0 : Base Address Register 0, 101호 직통번호..
-                device.port_addr = port_addr & 0xFFFFFFFC;
-                device.irq = pci_read_word(bus, slot, 0, 0x3C) & 0xFF;
-                pci_enable_bus_master(device.bus, device.device, device.sub_device);
-                return device;
-            }
-        }
+      if (pci_read_word(bus, slot, 0, 0) == vendor_id && pci_read_word(bus, slot, 0, 2) == device_id)
+      {
+        device.bus = bus;
+        device.device = slot;
+        device.sub_device = 0;
+        device.vendor_id = vendor_id;
+        device.device_id = device_id;
+        uint32_t port_addr = pci_read_dword(bus, slot, 0, 0x10); //BAR0 : Base Address Register 0, 101호 직통번호..
+        // print("PCI: BAR0 raw = 0x");
+        // print_hex(port_addr);
+        device.port_addr = port_addr & 0xFFFFFFFC;
+        // print(" processed = 0x");
+        // print_hex(device.port_addr);
+        // print("\n");
+        device.irq = pci_read_word(bus, slot, 0, 0x3C) & 0xFF;
+        pci_enable_bus_master(device.bus, device.device, device.sub_device);
+        return device;
+      }
     }
-    return device;
+  }
+  return device;
 }
 
