@@ -109,7 +109,15 @@ void kernel_main()
 
   for (volatile int i = 0; i < 50000000; i++)
   {
-    
+    uint8_t buffer[1024];
+    int bytes = tcp_read(sock, buffer, sizeof(buffer));
+    if (bytes > 0)
+    {
+      for(int j=0; j < bytes; j++)
+      {
+        terminal_write_char(buffer[j], 0x01); 
+      }
+    }
   }
   tcp_close(sock, device.port_addr);
 

@@ -107,6 +107,7 @@ int tcp_socket(void);
 int tcp_connect(int socketid, uint32_t port_addr, uint32_t dst_ip, uint16_t dst_port);
 int tcp_write(int socketid, uint32_t port_addr, uint8_t *data, uint32_t len);
 int tcp_close(int socketid, uint32_t port_addr);
+int tcp_read(int socketid, uint8_t *buf, uint32_t len);
 
 extern struct socket_cache socket_cache[MAX_SOCKET_ID];
 extern bool socket_used[MAX_SOCKET_ID];

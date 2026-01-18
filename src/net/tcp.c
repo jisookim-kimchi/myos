@@ -332,3 +332,34 @@ int tcp_close(int socketid, uint32_t port_addr)
   cache->socket.seq += 1;
   return 0;
 }
+
+int tcp_read(int socketid, uint8_t *buf, uint32_t len)
+{
+  if (socketid < 0 || socketid >= MAX_SOCKET_ID || !socket_used[socketid])
+  {
+    return -1;
+  }
+  struct tcp_socket *socket = &socket_cache[socketid].socket;
+  if (socket->recv_len == 0)
+    return 0;
+  uint32_t read_len;
+  if (len < socket->recv_len)
+  {
+    read_len = len;
+  }
+  else
+  {
+    read_len = socket->recv_len;
+  }
+  ft_memcpy(buf, socket->recv_buf, read_len);
+  uint32_t remaining = socket->recv_len - read_len;
+  if (remaining > 0)
+  {
+    for (uint32_t i = 0; i < remaining; i++)
+    {
+       socket->recv_buf[i] = socket->recv_buf[i + read_len];
+    }
+  }
+  socket->recv_len = remaining;
+  return read_len;
+}
