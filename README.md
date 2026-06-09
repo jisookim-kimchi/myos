@@ -152,16 +152,6 @@ The PCI bus allows the OS to query and connect hardware devices dynamically (Plu
 
 MyOS implements a minimal network stack processing layers from L2 to L4:
 
-```
-+-------------------------------------------------+
-| TCP / ICMP / UDP (Transport Layer - L4)         |
-+-------------------------------------------------+
-| IP (Internet Layer - L3)                        |
-+-------------------------------------------------+
-| Ethernet (Data Link Layer - L2)                 |
-+-------------------------------------------------+
-```
-
 #### 1. ARP (Address Resolution Protocol)
 Maps IP addresses to physical MAC addresses.
 * **Debugging Nightmare**: When parsing ARP packets, I forgot to swap the fields from Network Byte Order (Big-endian) to Host Byte Order (Little-endian). The addresses were completely scrambled, and ARP requests failed silently until I properly wrapped them with `ntohs()` and `ntohl()`!
@@ -257,11 +247,11 @@ Because the hardware treats the disk as a flat array of 0s and 1s, the FAT16 dri
 
 #### Physical Disk Layout
 ```
-+--------------------+----------------+----------------+----------------+
+
 | Reserved Region    | FAT Region     | Root Directory | Data Region    |
 | (Sector 0-199)     | (File Alloc    | (Fixed list of | (Actual file   |
 | Bootloader + Kernel| Table maps)    | root files)    | contents)      |
-+--------------------+----------------+----------------+----------------+
+
 ```
 
 #### Key Implementation Details
@@ -288,16 +278,6 @@ The PCI bus allows the OS to query and connect hardware devices dynamically (Plu
 ### 9. Network Stack (Ethernet, ARP, IP, ICMP, TCP)
 
 MyOS implements a minimal network stack processing layers from L2 to L4:
-
-```
-+-------------------------------------------------+
-| TCP / ICMP / UDP (Transport Layer - L4)         |
-+-------------------------------------------------+
-| IP (Internet Layer - L3)                        |
-+-------------------------------------------------+
-| Ethernet (Data Link Layer - L2)                 |
-+-------------------------------------------------+
-```
 
 #### 1. ARP (Address Resolution Protocol)
 Maps IP addresses to physical MAC addresses.
