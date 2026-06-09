@@ -1,8 +1,360 @@
+# MyOS: 32-bit x86 Operating System
+
+### 1. Bootloader & The Transition to Protected Mode
+When the PC boots up, the BIOS ROM executes first. It searches for the boot signature `0x55AA` at the end of the first sector (bytes 511 and 512) on the storage device. Once found, it copies this 512-byte sector to RAM at physical address `0x0000:0x7C00` and jumps to `0x7C00` to execute our bootloader.
+
+Transitioning from **16-bit Real Mode** to **32-bit Protected Mode** was one of the hardest parts because it had to be written entirely in Assembly. Here is how I set it up:
+1. **Enable A20 Gate**: Essential to access memory beyond the 1MB limit.
+2. **Load Global Descriptor Table (GDT)**: The GDT acts as a "map" defining segment limits, base addresses, and privileges.
+3. **Set CR0 PE Bit**: The 0th bit of the CR0 register is the *Protection Enable* (PE) bit. Changing it from `0` to `1` tells the CPU to operate in 32-bit Protected Mode.
+4. **Perform a Far Jump**: Even after setting the CR0 bit, the CPU's `CS` (Code Segment) register still holds a 16-bit state. A far jump completely flushes the CPU pipeline and loads the 32-bit code segment, entering the `[BITS 32]` execution block.
+5. **ATA LBA Loading**: Instead of relying on BIOS interrupts (which are unavailable in Protected Mode), I directly programmed the hard disk controller's I/O ports to read 100 sectors of kernel code (`kernel.bin`) and deliver it directly to the 1MB memory mark.
 
 
-MyOS: 32비트 x86 운영체제
+### 2. Kernel Initialization
+Once in Protected Mode, the execution jumps to the kernel's starting point.
 
-# 부트로더
+#### `kernel.asm`
+* Initializes all segment registers (`DS`, `SS`, `ES`, `FS`, `GS`) to the kernel data selector (`0x10`).
+* Sets up the kernel stack at `0x200000`.
+* Remaps the PIC (Programmable Interrupt Controller) to route hardware interrupts IRQ 0-15 to IDT vectors 32-47 (preventing overlaps with CPU exceptions).
+
+#### `kernel.c`
+* **Redefines the GDT**: The bootloader's GDT is just a minimal map to get us into Protected Mode. The kernel GDT is a complete map including User Mode segments and a TSS descriptor.
+* **Initializes Kernel Heap**: Prepares the memory allocator.
+* **IDT & Hardware Timers**: Builds the Interrupt Descriptor Table and enables timer interrupts.
+* **TSS (Task State Segment)**: Configures the TSS and registers the kernel stack (`esp0 = 0x600000`) where the CPU should land when returning from a User Mode (Ring 3) interrupt.
+* **FAT16 Driver**: Scans the disk to mount the FAT16 partition.
+* **Paging**: Enables virtual memory by splitting memory into 4KB blocks.
+
+
+### 3. Memory Management (Paging & Heap)
+
+#### Virtual Memory & Paging
+Each program receives a virtual address space of 4GB. To enforce security and isolation, I divided the memory layout (defined in `config.h`):
+* **`0` to `256MB`**: Kernel Space (Protected)
+* **`256MB` to `512MB`**: User Space
+
+> [!WARNING]
+> This separation prevents user-space processes from accessing or corrupting kernel memory.
+
+Paging is structured as a two-level hierarchy using 4KB pages:
+1. **Page Directory (1024 Entries)**: Each entry contains the physical address of a Page Table.
+2. **Page Table (1024 Entries)**: Maps virtual addresses to physical pages.
+3. **Page Frame**: Actual 4KB chunks of physical RAM.
+
+The `CR3` register holds the physical address of the currently active Page Directory. Swapping this register is the core mechanism of Context Switching.
+
+#### Heap Allocator
+The kernel heap is managed using a **Heap Table**, where each entry represents a 4KB block.
+* Block state is tracked using bitflags (e.g., `TAKEN`, `FIRST` block of allocation, `NEXT` block continuation).
+* **`malloc` flow**: Calculates the required number of blocks $\rightarrow$ searches the Heap Table from index 0 for continuous free blocks $\rightarrow$ marks them as taken $\rightarrow$ returns the physical address.
+* **`sbrk` System Call**: When a user process runs out of heap space, it requests `sbrk`. The kernel expands `cur_end_heap` and maps new physical page frames to the user's virtual space.
+
+
+
+### 4. Interrupts & System Calls
+
+When a Ring 3 user program calls `int 0x80` to request an OS service:
+1. The CPU looks at the **TSS** to find the Kernel Stack Pointer (`ESP0`) and shifts the stack pointer.
+2. It pushes the user-space states (registers, program counter `EIP`, stack `ESP`) onto the kernel stack.
+3. It jumps to the Interrupt Service Routine (ISR) defined in `idt.asm`.
+4. It calls the C handler (`isr80h_handle_command`) to execute the system call, using `EAX` to identify the system call number.
+5. After execution, `popad` restores the registers, and `iret` switches the privilege level back to Ring 3.
+
+```
++-------------------------------------------------------------+
+|                     User Mode (Ring 3)                      |
+|  1. Push Args -> 2. Load Syscall ID into EAX -> 3. int 0x80 |
++-----------------------------------------+-------------------+
+                                          | (TSS switches ESP to ESP0)
++-----------------------------------------v-------------------+
+|                    Kernel Mode (Ring 0)                     |
+|  4. idt.asm (Save State/pushad) -> 5. interrupt_handler()   |
+|  6. Read Args from User Stack (copy_from_task)              |
+|  7. Restore State (popad) -> 8. iret (Back to Ring 3)       |
++-------------------------------------------------------------+
+```
+
+#### Passing Data: Kernel $\leftrightarrow$ User
+Since user-space and kernel-space have isolated memory spaces:
+* The kernel reads arguments from the user stack using `task_get_stack_item()`.
+* To read/write data pointers, the kernel temporarily switches its page directory to the user task's page directory (`paging_switch()`), copies the memory (`copy_from_task`), and switches back.
+
+> [!IMPORTANT]
+> **What tripped me up here:** In `idt.asm`, I spent days debugging because I didn't realize that the first member of the ISR structure corresponds to the top of the stack (lowest memory address). Understanding how `push` and `pop` align with structural layouts was a major breakthrough!
+
+
+### 5. Tasks & Process Management
+
+* **Process**: A container (the "house") holding shared resources like memory maps (page directories) and open file descriptors.
+* **Task**: An execution thread (the "worker") that holds CPU registers, a task state, and a stack.
+
+Currently, MyOS maintains a `1:1` relationship between processes and tasks.
+
+When initializing a task:
+1. Load program binary (often an **ELF** file) using the ELF loader (`elfloader_load_elf()`).
+2. Allocate physical page frames and map the binary into the task's virtual space using `process_map_binary()`.
+3. Set up command-line arguments on the stack using `process_setup_arguments()`.
+4. Jump into user mode via `iret`.
+
+
+### 6. Preemptive Scheduler & Context Switching
+
+MyOS implements a **Preemptive Round-Robin Scheduler**:
+* A hardware timer triggers an interrupt every **10ms**.
+* Even if a task does not yield, the OS forces a switch (preemption). This ensures that a buggy or infinite loop in a user program won't freeze the entire system!
+* **Context Switching Process**:
+  1. Save current registers onto the active task's kernel stack.
+  2. Swap the `CR3` register (`paging_switch(next_task->page_directory)`) to swap virtual spaces.
+  3. Update `tss.esp0` to point to the new task's kernel stack (`next_task->kstack + 4096`).
+  4. Restore the new task's registers and resume execution.
+
+> [!TIP]
+> **Priority Decay Idea**: To keep interactive programs snappy, I implemented a simple heuristic: if a task uses up its CPU quota continuously without yielding, its priority is dynamically lowered.
+
+
+### 7. FAT16 File System
+
+Because the hardware treats the disk as a flat array of 0s and 1s, the FAT16 driver translates these raw bytes into files and folders.
+
+#### Physical Disk Layout
+```
++--------------------+----------------+----------------+----------------+
+| Reserved Region    | FAT Region     | Root Directory | Data Region    |
+| (Sector 0-199)     | (File Alloc    | (Fixed list of | (Actual file   |
+| Bootloader + Kernel| Table maps)    | root files)    | contents)      |
++--------------------+----------------+----------------+----------------+
+```
+
+#### Key Implementation Details
+1. **Private Streamers**: I designed `struct fat_private` to utilize multiple streamers (e.g., `cluster_read_stream` vs `fat_read_stream`). Reading a file requires reading its data blocks and parsing the FAT table to locate the next cluster. Using a single stream pointer would corrupt the file read offset. Dividing them resolved this issue.
+2. **Cluster-to-Sector Translation Formula**:
+   $$\text{Sector} = (\text{Cluster} - 2) \times \text{Sectors Per Cluster} + \text{Data Area Start Sector}$$
+   *(We subtract 2 because clusters 0 and 1 are reserved).*
+3. **FAT Entry Position**: Since it's FAT16, each entry is 16 bits (2 bytes). Thus, $\text{Position} = \text{Cluster Number} \times 2$.
+
+
+### 8. PCI Bus & RTL8139 Network Driver
+
+#### PCI Bus Discovery
+The PCI bus allows the OS to query and connect hardware devices dynamically (Plug and Play).
+* Write the target Bus, Device, and Function ID to port `0xCF8` (Address Port) using `outl`.
+* Read the response from port `0xCFC` (Data Port) using `inl`.
+* Using this, MyOS scans slots to find the Realtek RTL8139 Network Card (Vendor ID `0x10EC`). It queries the card for its Base Address (`BAR0`, e.g., `0xC000`) to communicate with it.
+
+#### RTL8139 Driver
+* **Packet Transmission (TX)**: Implements round-robin sending over 4 descriptor slots.
+* **Packet Reception (RX)**: Implements RX WRAP mode. It stores incoming packets sequentially in a ring buffer, letting the buffer wrap around. I added a `+1500` byte safety buffer to easily parse packets overlapping the buffer boundaries without splitting them, sacrificing a bit of memory for simplicity.
+
+
+### 9. Network Stack (Ethernet, ARP, IP, ICMP, TCP)
+
+MyOS implements a minimal network stack processing layers from L2 to L4:
+
+```
++-------------------------------------------------+
+| TCP / ICMP / UDP (Transport Layer - L4)         |
++-------------------------------------------------+
+| IP (Internet Layer - L3)                        |
++-------------------------------------------------+
+| Ethernet (Data Link Layer - L2)                 |
++-------------------------------------------------+
+```
+
+#### 1. ARP (Address Resolution Protocol)
+Maps IP addresses to physical MAC addresses.
+* **Debugging Nightmare**: When parsing ARP packets, I forgot to swap the fields from Network Byte Order (Big-endian) to Host Byte Order (Little-endian). The addresses were completely scrambled, and ARP requests failed silently until I properly wrapped them with `ntohs()` and `ntohl()`!
+
+#### 2. IP (Internet Protocol)
+Responsible for routing packets across networks using IP headers. It tracks Time to Live (TTL) and the underlying protocol type.
+
+#### 3. ICMP (Internet Control Message Protocol)
+Handles Ping requests. If a ping reaches MyOS, it responds with an ICMP Echo Reply.
+
+#### 4. TCP (Transmission Control Protocol)
+Maintains reliable connections using a **3-Way Handshake** (SYN $\rightarrow$ SYN-ACK $\rightarrow$ ACK).
+* **Endianness in TCP Structures**: In x86 (little-endian), bitfields are filled right-to-left. Because of this, the memory layout of structural bitfields in C code is reversed compared to the network header spec! Correcting this layout alignment was crucial.
+* **HTTP Buffer Size Bug**: While testing HTTP requests over TCP, the connection would repeatedly drop or throw errors. I realized that my static buffer size was set too small, causing payloads to overflow. Increasing the buffer sizes fixed the crashes.
+
+
+
+### 10. Build & Run Instructions
+
+#### Prerequisites
+Make sure you have `nasm`, `gcc` (i386 cross-compiler or multilib), and `qemu-system-i386` installed.
+
+#### 1. Build the OS
+```bash
+./build.sh
+```
+This compiles the bootloader, kernel, and user applications, producing `myos.bin`.
+
+#### 2. Run in QEMU (with RTL8139 Network & Wireshark Dump)
+```bash
+qemu-system-i386 -hda ./bin/myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap
+```
+* **`-object filter-dump...`**: Captures all network packets sent/received by the virtual OS and saves them to `dump.pcap`. You can open this file in Wireshark to debug ARP, ICMP, and TCP packets!
+
+#### 3. Test Programs in the Shell
+Once the shell boots, you can execute user binaries from the FAT16 disk:
+* **Brainfuck Interpreter**: `run 0:/bf.bin 0:/hello.bf`
+* **Empty Program Test**: `run 0:/blank.bin`
+* **Parent-Child Wait Test**: `run 0:/waiter.bin`
+* **Nested Shell**: `run 0:/shell.bin`
+
+
+
+### 11. Personal Retrospective & Lessons Learned
+
+Before starting this project, assembly looked like an alien language, and concepts like "segmentation" or "paging" were just abstract paragraphs in a textbook. Writing my own OS changed everything.
+* **Assembly vs C**: I learned how to bridge high-level logic with hardware instructions. Figuring out GDT mappings and CR0 bit manipulations made me realize how the CPU actually interprets code.
+* **Interrupts & TSS**: Implementing task switching and privilege transitions (Ring 3 to Ring 0) gave me a solid grasp of how modern kernels protect themselves from malicious user programs.
+* **Hardware Debugging**: Using `gdb` connected to QEMU was a lifesaver. Stepping through instruction-by-instruction showed me exactly where the stack pointer was corrupted.
+* **Build Systems**: Writing a Makefile that compiles multiple sub-directories and links them into a single raw binary was incredibly frustrating, but taught me a lot about the linking process.
+
+
+### 12. References
+* **[OSDev Wiki](https://wiki.osdev.org)**: The absolute encyclopedia for operating system developers. I spent countless hours reading hardware specifications here.
+* **[Simhs93's Blog (Korean)](https://m.blog.naver.com/simhs93/)**: An outstanding lecture series that helped me grasp core concepts in my native language.he kernel temporarily switches its page directory to the user task's page directory (`paging_switch()`), copies the memory (`copy_from_task`), and switches back.
+
+> [!IMPORTANT]
+> **What tripped me up here:** In `idt.asm`, I spent days debugging because I didn't realize that the first member of the ISR structure corresponds to the top of the stack (lowest memory address). Understanding how `push` and `pop` align with structural layouts was a major breakthrough!
+
+
+### 5. Tasks & Process Management
+
+* **Process**: A container (the "house") holding shared resources like memory maps (page directories) and open file descriptors.
+* **Task**: An execution thread (the "worker") that holds CPU registers, a task state, and a stack.
+
+Currently, MyOS maintains a `1:1` relationship between processes and tasks.
+
+When initializing a task:
+1. Load program binary (often an **ELF** file) using the ELF loader (`elfloader_load_elf()`).
+2. Allocate physical page frames and map the binary into the task's virtual space using `process_map_binary()`.
+3. Set up command-line arguments on the stack using `process_setup_arguments()`.
+4. Jump into user mode via `iret`.
+
+
+### 6. Preemptive Scheduler & Context Switching
+
+MyOS implements a **Preemptive Round-Robin Scheduler**:
+* A hardware timer triggers an interrupt every **10ms**.
+* Even if a task does not yield, the OS forces a switch (preemption). This ensures that a buggy or infinite loop in a user program won't freeze the entire system!
+* **Context Switching Process**:
+  1. Save current registers onto the active task's kernel stack.
+  2. Swap the `CR3` register (`paging_switch(next_task->page_directory)`) to swap virtual spaces.
+  3. Update `tss.esp0` to point to the new task's kernel stack (`next_task->kstack + 4096`).
+  4. Restore the new task's registers and resume execution.
+
+> [!TIP]
+> **Priority Decay Idea**: To keep interactive programs snappy, I implemented a simple heuristic: if a task uses up its CPU quota continuously without yielding, its priority is dynamically lowered.
+
+
+### 7. FAT16 File System
+
+Because the hardware treats the disk as a flat array of 0s and 1s, the FAT16 driver translates these raw bytes into files and folders.
+
+#### Physical Disk Layout
+```
++--------------------+----------------+----------------+----------------+
+| Reserved Region    | FAT Region     | Root Directory | Data Region    |
+| (Sector 0-199)     | (File Alloc    | (Fixed list of | (Actual file   |
+| Bootloader + Kernel| Table maps)    | root files)    | contents)      |
++--------------------+----------------+----------------+----------------+
+```
+
+#### Key Implementation Details
+1. **Private Streamers**: I designed `struct fat_private` to utilize multiple streamers (e.g., `cluster_read_stream` vs `fat_read_stream`). Reading a file requires reading its data blocks and parsing the FAT table to locate the next cluster. Using a single stream pointer would corrupt the file read offset. Dividing them resolved this issue.
+2. **Cluster-to-Sector Translation Formula**:
+   $$\text{Sector} = (\text{Cluster} - 2) \times \text{Sectors Per Cluster} + \text{Data Area Start Sector}$$
+   *(We subtract 2 because clusters 0 and 1 are reserved).*
+3. **FAT Entry Position**: Since it's FAT16, each entry is 16 bits (2 bytes). Thus, $\text{Position} = \text{Cluster Number} \times 2$.
+
+
+### 8. PCI Bus & RTL8139 Network Driver
+
+#### PCI Bus Discovery
+The PCI bus allows the OS to query and connect hardware devices dynamically (Plug and Play).
+* Write the target Bus, Device, and Function ID to port `0xCF8` (Address Port) using `outl`.
+* Read the response from port `0xCFC` (Data Port) using `inl`.
+* Using this, MyOS scans slots to find the Realtek RTL8139 Network Card (Vendor ID `0x10EC`). It queries the card for its Base Address (`BAR0`, e.g., `0xC000`) to communicate with it.
+
+#### RTL8139 Driver
+* **Packet Transmission (TX)**: Implements round-robin sending over 4 descriptor slots.
+* **Packet Reception (RX)**: Implements RX WRAP mode. It stores incoming packets sequentially in a ring buffer, letting the buffer wrap around. I added a `+1500` byte safety buffer to easily parse packets overlapping the buffer boundaries without splitting them, sacrificing a bit of memory for simplicity.
+
+
+### 9. Network Stack (Ethernet, ARP, IP, ICMP, TCP)
+
+MyOS implements a minimal network stack processing layers from L2 to L4:
+
+```
++-------------------------------------------------+
+| TCP / ICMP / UDP (Transport Layer - L4)         |
++-------------------------------------------------+
+| IP (Internet Layer - L3)                        |
++-------------------------------------------------+
+| Ethernet (Data Link Layer - L2)                 |
++-------------------------------------------------+
+```
+
+#### 1. ARP (Address Resolution Protocol)
+Maps IP addresses to physical MAC addresses.
+* **Debugging Nightmare**: When parsing ARP packets, I forgot to swap the fields from Network Byte Order (Big-endian) to Host Byte Order (Little-endian). The addresses were completely scrambled, and ARP requests failed silently until I properly wrapped them with `ntohs()` and `ntohl()`!
+
+#### 2. IP (Internet Protocol)
+Responsible for routing packets across networks using IP headers. It tracks Time to Live (TTL) and the underlying protocol type.
+
+#### 3. ICMP (Internet Control Message Protocol)
+Handles Ping requests. If a ping reaches MyOS, it responds with an ICMP Echo Reply.
+
+#### 4. TCP (Transmission Control Protocol)
+Maintains reliable connections using a **3-Way Handshake** (SYN $\rightarrow$ SYN-ACK $\rightarrow$ ACK).
+* **Endianness in TCP Structures**: In x86 (little-endian), bitfields are filled right-to-left. Because of this, the memory layout of structural bitfields in C code is reversed compared to the network header spec! Correcting this layout alignment was crucial.
+* **HTTP Buffer Size Bug**: While testing HTTP requests over TCP, the connection would repeatedly drop or throw errors. I realized that my static buffer size was set too small, causing payloads to overflow. Increasing the buffer sizes fixed the crashes.
+
+
+### 10. Build & Run Instructions
+
+#### Prerequisites
+Make sure you have `nasm`, `gcc` (i386 cross-compiler or multilib), and `qemu-system-i386` installed.
+
+#### 1. Build the OS
+```bash
+./build.sh
+```
+This compiles the bootloader, kernel, and user applications, producing `myos.bin`.
+
+#### 2. Run in QEMU (with RTL8139 Network & Wireshark Dump)
+```bash
+qemu-system-i386 -hda ./bin/myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap
+```
+* **`-object filter-dump...`**: Captures all network packets sent/received by the virtual OS and saves them to `dump.pcap`. You can open this file in Wireshark to debug ARP, ICMP, and TCP packets!
+
+#### 3. Test Programs in the Shell
+Once the shell boots, you can execute user binaries from the FAT16 disk:
+* **Brainfuck Interpreter**: `run 0:/bf.bin 0:/hello.bf`
+* **Empty Program Test**: `run 0:/blank.bin`
+* **Parent-Child Wait Test**: `run 0:/waiter.bin`
+* **Nested Shell**: `run 0:/shell.bin`
+
+
+### 11. Personal Retrospective & Lessons Learned
+
+Before starting this project, assembly looked like an alien language, and concepts like "segmentation" or "paging" were just abstract paragraphs in a textbook. Writing my own OS changed everything.
+* **Assembly vs C**: I learned how to bridge high-level logic with hardware instructions. Figuring out GDT mappings and CR0 bit manipulations made me realize how the CPU actually interprets code.
+* **Interrupts & TSS**: Implementing task switching and privilege transitions (Ring 3 to Ring 0) gave me a solid grasp of how modern kernels protect themselves from malicious user programs.
+* **Hardware Debugging**: Using `gdb` connected to QEMU was a lifesaver. Stepping through instruction-by-instruction showed me exactly where the stack pointer was corrupted.
+* **Build Systems**: Writing a Makefile that compiles multiple sub-directories and links them into a single raw binary was incredibly frustrating, but taught me a lot about the linking process.
+
+### 12. References
+* **[OSDev Wiki](https://wiki.osdev.org)**: The absolute encyclopedia for operating system developers. I spent countless hours reading hardware specifications here.
+* **[Simhs93's Blog (Korean)](https://m.blog.naver.com/simhs93/)**: An outstanding lecture series that helped me grasp core concepts in my native language.
+
+----
+
+### 부트로더
 pc를 키자마자 bios ROM 실행 -> 부트로더 로드 함 by searching boot signature "0x55AA"
 511과 512 byte  -> 이섹터를 RAM의 주소 0x0000:0x7c00에 복사합니다. 
 0x7c00로 점프해서 부트로더 실행! 
@@ -14,7 +366,7 @@ gdt 에는 세그먼트 레지스터를 정의하는 구조체가 있고 지도�
 CR0는 컨트롤 레지스터인데 0번째 비트가 Protection Enable 비트,
 0 -> 1 로 바꾸면 32비트 보호모드로 동작한다! 라고 모드를 바꿈. 모드만 바꾼상태. 아직 커널로 전환하는 방법모름.
 
-Far Jump 모드만 바꿨을뿐 아직 CPU의 cs는 16비트 모드로 남아있기때문에 완전히 32비트 코드로 바꾸는역할.
+Far Jump : 모드만 바꿨을뿐 아직 CPU의 cs는 16비트 모드로 남아있기때문에 완전히 32비트 코드로 바꾸는역할.
 
 2. A20 Gate : 1Mb이상의 메모리 접근을 가능하기 위해 이것도 활성화.
 3. ATA LBA 로딩 BIOS 인터럽트 사용하지 않고 직접 하드디스크 컨트롤러의 I/O 포트를 사용하여 데이터를 읽어오고, 커널 100 섹터를 1MB지점으로 배달함
@@ -23,13 +375,13 @@ Far Jump 모드만 바꿨을뿐 아직 CPU의 cs는 16비트 모드로 남아있
 [BITS 32]
 ata_lba_read 호출, 하드디스크로부터 메모리로 데이터를 읽어오고. 커널을 메모리(1MB)로 옮겨놓고 실행.
 
-## 커널 초기화
-# kernel.asm
+#### 커널 초기화
+##### kernel.asm
 1. 모든 세그먼트 레지스터를 커널용 (0x10)으로 초기화.
 2. 커널 스택 설정 (0x200000).
 3. PIC 재매핑(IRQ 0-15 -> 32-47).
 
-# kernel.c
+##### kernel.c
 1. GDT다시 정의, 커널 힙을 초기화.
 2. IDT & 입출력 인터럽트 타이머 드라이브 킴.
 3. TSS (Task State Segment) 정의, 인터럽트 시 돌아올 커널 스택(0x600000)을 설정.
@@ -38,13 +390,13 @@ ata_lba_read 호출, 하드디스크로부터 메모리로 데이터를 읽어�
 
 GDT를 왜 다시 정의 ? : 부트로더 GDT는 최소한의 지도, 커널 GDT는 커널이 필요로 하는 모든 기능을 담은 완성된 지도.
 
-# TSS와 TASK
+#### TSS와 TASK
 TSS : 유저 영역서 인터럽트 발생시 커널 영역으로 돌아오기 위해 커널 스택(esp0)을 알려줌.
 
 struct task: 현재 프로세스가 사용하던 레지스터(EAX, EBX 등) 상태를 저장하여, 나중에 다시 실행될 때 그 상태 그대로 복원할 수 있게 해주는 소프트웨어 데이터 시트입니다.
 TASK에 대한 설명은 뒤이어서...
 
-# FAT 16디스크
+#### FAT 16디스크
 
 -Reserved Region	: 부트 섹터(BPB)와 우리 커널이 들어있는 구역.	정문.
 0번섹터엔 부트로더, 1번에서 199번섹터 kernel.bin 이 로드 되어 대기하는 곳,,,
@@ -59,7 +411,7 @@ reserved sectors = 200으로 설정했기때문에 ..
 -Data Region	: 실제 파일 내용(텍스트, 바이너리 등)이 저장되는 구역.	실제 거주민.
 2번 클러스터 부터 시작해서 0,1번은 이미 예약됨. 우리가 실제로 읽고 쓰는 파일의 알맹이들은 이곳에 저장됨.
 
-# 파일시스템 :
+#### 파일시스템 :
 
 FAT16의 구조를 보자.
 주소(Byte) :  00    01  |  02    03  |  04    05  |  06    07  | ...
@@ -94,7 +446,7 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
 왜 Cluster - 2? : 0번과 1번은 예약되어있기때문.
 
 5. 전용 스트리머 (Streamers)
-우리 struct fat_private를 보면 스트리머가 하나가 아니라 여러 개(cluster_read_stream, fat_read_stream 등)입니다.
+우리 struct fat_private를 보면 스트리머이 하나가 아니라 여러 개(cluster_read_stream, fat_read_stream 등)입니다.
 
 이유: 파일을 읽는 도중에 다음 클러스터를 찾으려고 FAT 테이블 주소를 뒤져야 할 때가 있는데, 이때 스트리머 하나만 쓰면 주소가 꼬여버리죠.
 그래서 FAT 테이블을 읽는 스트리머와 실제 데이터를 읽는 스트리머를 분리했음.
@@ -109,7 +461,7 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
   특수 속성(Directory Attribute, 0x10)을 가진 파일임니다~.
 
 
-# 페이징 :
+#### 페이징 :
 
 ** 가상메모리 (Virtual Memory) : 실제 물리 RAM은 작아도, 각 프로그램에게 4GB의 가상 메모리 할당.
 
@@ -138,7 +490,7 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
   4. Page Frame(Physical Frame)(4kb) : 물리 메모리의 페이지. (실제 집 주소.)
 
 
-# 힙(HEAP)
+#### 힙(HEAP)
   
   Heap Table :
   명심해라 우리는 4KB블록 단위로 관리한다.
@@ -148,7 +500,7 @@ Sector = (Cluster - 2) * Sectors_per_cluster + root_directory.ending_sector_pos(
   
   malloc 호출 -> heap_calculate_required_blocks(size)로 필요한 블록 수 계산 -> 테이블 처음(Index 0)부터 시작해서 요청된 사이즈를 충족하는 연속된 빈 공간 찾음 -> 찾으면 heap_mark_blocks_as_taken() 호출해서 "taken"으로 마킹 -> 주소반환.
 
-# 인터럽트(Interrupt)
+#### 인터럽트(Interrupt)
 
 ring3 이 int0x80을 호출하면 ->
 cpu는 TSS를 보고 ESP0(커널스택)으로 스택 포인터를 옮기고.
@@ -193,7 +545,7 @@ idt.asm보면,
   포트 0x60(키보드 데이터포트)에서 데이터를 읽어옴.
   io.asm이 driver역할을함.
  
-# TASK
+#### TASK
 task는 thread같은 개념이라 생각하면됨.
 그럼 어떻게 task가 process의 공유자원을 사용하게되나 이게 중요하다고 보거든요?
 1. process 를 먼저 만들고.
@@ -204,7 +556,7 @@ process_map_memory는 가상메모리를 물리메모리에 매핑해서 물리�
 (각 TASK의 개인 사유지?)
 task 에는 페이지 디렉터리가 있음 그리고 process_map_binary 함수에서 페이지의 디렉터리에 process의 물리 주소를 매핑해버림 이 의미는 task가 여러개여도 process의 물리메모리공간을 공유할수있음.
 
-# Scheduling (Context Switching)
+#### Scheduling (Context Switching)
 
 1. Scheduling
 라운드로빈 방식으로 리스트의 next를 따라가며 다음 실행할 Task를 선택.
@@ -234,7 +586,7 @@ tss.esp0 = new_task->kstack + 4096;
 TSS (Task State Segment): CPU에게 "유저 모드(Ring 3)에서 인터럽트 걸리면, 커널 모드(Ring 0) 
 * 각 Task마다 별도의 커널 스택을 가지므로, 스위칭할 때마다 TSS도 갱신해줘야  함!
 
-# PROCESS
+#### PROCESS
    (메모리, 파일 등)을 포함하는 하우스(house)
    실제로 CPU를 차지하고 코드를 실행하는 일꾼입니다. (Context Switching의 대상)
    프로세스는 하나 이상의 태스크를 가집니다.
@@ -242,16 +594,16 @@ TSS (Task State Segment): CPU에게 "유저 모드(Ring 3)에서 인터럽트 �
 생성흐름은 process_load_for_slot -> process_load_data -> process_map_virtual_memory -> process_setup_arguments -> iret 이렇게.
 
 
-# ELF
+#### ELF
 ELF는 약간 지도라고 생각하면됨 코드는 여기 데이터는 저기 이런식으로 알려주는 것.
 process_load_data -> elfloader_load_elf 흐름.
 
-# Sbrk (Memory Allocation)
+#### Sbrk (Memory Allocation)
 유저 프로그램이 malloc을 하다가 힙 공간이 부족하면 `sbrk` 시스템 콜을 요청.
 malloc 함수보면 알수있음.
 프로세스의 `cur_end_heap`을 늘리고, 늘어난 공간만큼 실제 물리 페이지를 할당해서 매핑해줌.
 
-# 실행 방법
+#### 실행 방법
 1. `./build.sh`를 실행하여 커널과 유저 프로그램을 컴파일.
 2. `qemu-system-i386 -hda ./bin/myos.bin`을 실행하여 운영체제 구동.
 3. 쉘에서 명령어 입력: `run 0:/bf.bin 0:/hello.bf`
@@ -260,7 +612,7 @@ malloc 함수보면 알수있음.
 5. `run 0:/waiter.bin` (부모-자식 프로세스 대기 테스트)
 6. `run 0:/shell.bin` (shell 실행 테스트)
 
-## references
+##### references
 그냥 모를때마다 OsDev Wiki를 참고했고, 사실 구글링도 많이했는데,,, OSDev Wiki가 젤 편했고,
 구글에 소스는 무진장 많음 대표적인 두곳만 소개하자면,,,
 - **OSDev Wiki (https://wiki.osdev.org)**: OS 개발의 백과사전 같은 곳으로, 하드웨어 명세를 이해하는 데 필수적이고 구조체 짜는데 있어서 참조 많이함.
@@ -276,7 +628,7 @@ malloc 함수보면 알수있음.
 근데 makefile짜는건 솔직히 복잡하고 어려웠음.
 
 
-# PCI 버스 (Peripheral Component Interconnect)
+#### PCI 버스 (Peripheral Component Interconnect)
 메인보드에있음.
 cpu가 0xCF8(PCI컨트롤러 주소 포트) 데스크에 0번 버스(101동) 1번 슬롯(1001호) 요청! -> outl
 그리고 메인보드가 신호를 듣고 1번 0xCFC(PCI컨트롤러 데이터포트)에 응답을 보냄.
@@ -299,7 +651,7 @@ plug and play 방식 일단 꽃으면 자리는 (BIOS/OS)가 비어있는 곳 �
 이제 0xC000번지로 데이터를 보내면 랜카드가 받음.
 참고로 우리랜카드는 rtl8139씀.
 
-# rtl8139
+#### rtl8139
 
 rtl8139 네트워크 드라이버.
 PCI버스를 통해 장치를 탐지하고 패킷 송수신 가능.
@@ -311,7 +663,7 @@ WRAP모드 : 패킷을 끊지 않고 연속으로 저장하는거 그래서 + 15
 패킷 테스트하기 위해 wireshark 필요.
 qemu-system-i386 -hda ./myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap
 
-# Ethernet 프레임 - 편지.
+#### Ethernet 프레임 - 편지.
 이더넷은 랜선으로 데이터를 전송하는 프로토콜이라 생각하면됨 그러니까,,,
 LAN(Local Area Network) 내에서 데이터를 전송하는 프로토콜.
 광역 X 지역.
@@ -319,7 +671,7 @@ LAN(Local Area Network) 내에서 데이터를 전송하는 프로토콜.
 받는이 MAC Addr    보내는이 MAC Addr    편지종류 프레임 타입    데이터
  6byte +          6byte +             2byte +              maximum.1500byte
 
-## ARP(Address Resolution Protocol)인 경우 이구조.
+##### ARP(Address Resolution Protocol)인 경우 이구조.
  ------Ethernet Frame-------------
 |                                |  
 |    Ethernet Header(14bytes)    |
@@ -345,7 +697,7 @@ ARP : IP주소 -> MAC 주소변환. 왜? 이더넷은 MAC주소로 통신함. �
 아이거할때 리틀엔디안에서 빅엔디안으로 안바꿔서 작동안됨...
 
 
-## ip(Internet Protocol) 인경우
+##### ip(Internet Protocol) 인경우
 ------Ethernet Frame---------------------
 |    Ethernet Header(14bytes)           |
 |    [dest 6] [src 6] [type 2(0x0800)]  |
@@ -365,7 +717,7 @@ IP :  실제 데이터 전송! L3(layer)
 -데이터(페이로드)
 
 
-## ICMP(Internet Control Message Protocol)
+##### ICMP(Internet Control Message Protocol)
 ping 프로토콜 : 연결이 되었는지 보내는 신호! ICMP패킷을 보냄 
 ICMP : IP 데이터그램이 전송, 수신, 또는 라우팅에 실패했을 때의 정보를 전달하는 프로토콜.
 
@@ -375,7 +727,7 @@ cpu : 리틀엔디안
 비트 순서가 달라서 ntohs, ntohl 함수를 사용합니다.
 근데 이거 좀 테스트할때 많이 놓침... 그래서 wireshark로 확인할때 안뜨는 경우 종종 있었음.
 
-## TCP(Telecommunication Protocol)
+##### TCP(Telecommunication Protocol)
 little-endian 시스템에선 비트가 오른쪽에서 왼쪽으로 채워짐.
 구조체 선언 순서와 실제 메모리 배치가반대!
 ethernet | ip | tcp | data
@@ -395,15 +747,16 @@ segments = TCP 헤더 + 데이터
 패킷 = IP 헤더 + 세그먼트 
 프레임 = Ethernet 헤더 + 패킷
 
-###  어떻게 연결?
+###### 어떻게 연결?
 
-### 3-way-handshake
+###### 3-way-handshake
 데이터 없음.
 연결만 확인.
 
-### Debugging
+###### Debugging
 wireshark 이용.
 seq 와 ack 를 보며 잘 전달이 되었는지 확인가능.
 
 난 HTTP와 연결할때 buffersize를 너무 작게 설정해서 에러가 났었음.
 그리고 또한 호스트(리틀엔디안)와 네트워크(빅엔디안) 비트 순서가 다르기때문에 ntohs, ntohl 함수를 사용해야 하는데 이것도 꼼꼼하게 확인해야함 여기서 많이 틀렸음.
+

@@ -55,7 +55,6 @@ step2:
 ;GDT in protected mode define memory segments
 gdt_start:
 
-
 gdt_null:
     ; GDT entries would go here
     dd 0x0 ;4bytes

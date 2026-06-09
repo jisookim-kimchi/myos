@@ -111,6 +111,7 @@ void kernel_main()
   {
     uint8_t buffer[1024];
     int bytes = tcp_read(sock, buffer, sizeof(buffer));
+    (void)bytes;
     if (bytes > 0)
     {
       for(int j=0; j < bytes; j++)
