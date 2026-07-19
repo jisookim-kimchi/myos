@@ -24,7 +24,7 @@ paging_4gb_chunk_t *paging_get_kernel_chunk(void)
     return kernel_chunk;
 }
 
-//각 프로세스마다 4GB 가상 메모리 공간을 할당해주는 함수
+//Allocate 4GB memory for each process
 struct paging_4gb_chunk* paging_new_4gb(uint8_t flags)
 {
     uint32_t offset = 0;

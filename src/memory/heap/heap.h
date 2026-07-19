@@ -14,6 +14,11 @@
 
 typedef unsigned char HEAP_BLOCK_TABLE_ENTRY;
 
+/*
+    heap_table: A metadata table that tracks the allocation status of each heap block.
+    - entries: Pointer to an array of block entry status bytes (1 byte --> 4KB)
+    - total_size: The total number of blocks in the heap.
+*/
 typedef struct heap_table
 {
     HEAP_BLOCK_TABLE_ENTRY *entries;

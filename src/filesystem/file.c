@@ -91,6 +91,9 @@ static struct file_descriptor *get_file_descriptor(int fd)
   return file_descriptors[i];
 }
 
+/*
+  which filesystem (FAT16 or 32 , NTFS) is used in the disk
+*/
 struct filesystem *file_system_resolve(struct disk *disk)
 {
   struct filesystem *fs = NULL;

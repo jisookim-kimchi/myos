@@ -11,7 +11,6 @@ struct keyboard
   int tail;
 };
 
-void keyboard_init();
 void keyboard_handle_interrupt();
 char keyboard_pop();
 void keyboard_push(char c);

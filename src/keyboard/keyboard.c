@@ -3,11 +3,6 @@
 #include "../task/task.h"
 #include "../task/process.h"
 
-void keyboard_init()
-{
-    // Process creation will handle initialization
-}
-
 // 0x2A: Left Shift, 0x36: Right Shift
 #define KEY_LEFT_SHIFT 0x2A
 #define KEY_RIGHT_SHIFT 0x36

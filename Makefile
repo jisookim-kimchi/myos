@@ -60,7 +60,8 @@ $(BIN_DIR)/myos.bin: $(BIN_DIR)/boot.bin $(BIN_DIR)/kernel.bin programs
 
 $(BIN_DIR)/kernel.bin: $(FILES)
 	i686-elf-ld -g -relocatable $(FILES) -o $(BUILD_DIR)/kernelfull.o
-	i686-elf-gcc $(FLAGS) -T $(SRC_DIR)/linker.ld -o $(BIN_DIR)/kernel.bin -ffreestanding -O0 -nostdlib $(BUILD_DIR)/kernelfull.o
+	i686-elf-gcc $(FLAGS) -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel.elf -ffreestanding -O0 -nostdlib $(BUILD_DIR)/kernelfull.o
+	i686-elf-objcopy -O binary $(BUILD_DIR)/kernel.elf $(BIN_DIR)/kernel.bin
 
 $(BIN_DIR)/boot.bin: $(SRC_DIR)/boot/boot.asm
 	mkdir -p $(BIN_DIR)

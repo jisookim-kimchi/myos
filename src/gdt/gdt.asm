@@ -1,4 +1,4 @@
-section .asm
+section .text
 global gdt_load
 
 ;return 주소는 스택에 저장되어있음 항상 .
@@ -10,7 +10,7 @@ gdt_load:
     mov [gdt_descriptor + 2], eax ;gdt_descriptor 메모리블록안에서 2바이트 뒤를 의미. 즉 아래보면 size가 2바이트니까 거기를 건너뛰어서!
     mov ax, [esp+8]
     mov [gdt_descriptor], ax ;gdt_descriptor 메모리블록안에서 2바이트 앞을 의미.
-    lgdt [gdt_descriptor]
+    lgdt [gdt_descriptor] ; lgdt : (Load GDT) speical instruction
     ret
 
 

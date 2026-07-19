@@ -1,11 +1,5 @@
 # MyOS: 32-bit x86 Operating System
 
-Languages: [English](#english-version) | [한국어](#myos-32-bit-x86-operating-system-1)
-
----
-
-## English Version
-
 ### Bootloader
 BIOS ROM runs immediately upon turning on the PC -> loads the bootloader by searching for the boot signature "0x55AA".
 Copies this sector (511 and 512 bytes) to RAM address 0x0000:0x7C00.
@@ -313,8 +307,6 @@ When connecting with HTTP, I encountered errors because the buffer size was set 
 Also, because host (little-endian) and network (big-endian) byte orders differ, I had to ensure ntohs and ntohl were used consistently, which was a common source of bugs.
 
 ---
-
-# MyOS: 32-bit x86 Operating System
 
 
 ### 부트로더

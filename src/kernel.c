@@ -51,13 +51,14 @@ void kernel_main()
 
   // Load the gdt
   gdt_load(gdt_real, sizeof(gdt_real));
-
+  
   kernel_heap_init();
   idt_init();
+  
+  //for debugging set comment
+  //timer_init(100);
 
-  keyboard_init();
-  timer_init(100);
-
+  /*
   //0x10EC 리얼텍 제조사 번호, 0x8139 8139모델번호.
   pci_scan_bus();
   struct pci_device device = pci_get_device(0x10EC, 0x8139);
@@ -97,9 +98,11 @@ void kernel_main()
   for (volatile int i = 0; i < 1000000; i++) { }
   icmp_send(device.port_addr, ping_data, 8, target_ip, ICMP_ECHO_REQUEST);
   print("Ping sent!\n");
+  */
 
   enable_interrupts();
 
+  /*
   int sock = tcp_socket();
   tcp_connect(sock, device.port_addr, target_ip, 80);
 
@@ -121,6 +124,7 @@ void kernel_main()
     }
   }
   tcp_close(sock, device.port_addr);
+  */
 
 
 
@@ -128,7 +132,8 @@ void kernel_main()
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
   tss.esp0 = 0x600000;
   tss.ss0 = MYOS_KERNEL_DATA_SELECTOR;
-  tss_load(0x28);
+  tss_load(0x28); // TSS 셀렉터
+  
   file_system_init();
 
   disk_search_and_init();
@@ -159,8 +164,8 @@ void kernel_main()
   isr80h_register_command_call();
 
   struct process *process = 0;
-  int res = process_load("0:/shell.bin", &process);
-  print("1\n");
+  int res = process_load("0:/blank.bin", &process);
+  //int res = process_load("0:/shell.bin", &process);
   if (res < 0)
   {
     panic("process_load failed!\n");

@@ -46,7 +46,7 @@ step2:
 .load_protected:
     cli
     lgdt[gdt_descriptor]  ; load GDT on CPU's GDTR register
-    mov eax, cr0          ; CRO's role : cpu mode setting 
+    mov eax, cr0          ; cr0 : cpu mode setting 
     or eax, 1             ; PE 비트 설정 (Protected Mode Enable)
     mov cr0, eax            
     jmp CODE_SEG:load32   ;far jump
@@ -153,6 +153,6 @@ ata_lba_read:
     ret
 
 times 510-($ -$$) db 0      ; fill remaining bytes with 0 up to 510
-dw 0xAA55                   ; define word store 0xaa55
+dw 0xAA55                   ; define word store 0xaa55 0x7def
 
 

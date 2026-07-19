@@ -1,6 +1,9 @@
 #ifndef TSS_H
 #define TSS_H
 
+/*
+    when it switch from 'user' to 'kernel', provide esp0 as 'kernel stack pointer'
+*/
 #include <stdint.h>
 struct tss
 {

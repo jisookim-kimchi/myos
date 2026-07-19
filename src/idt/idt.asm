@@ -70,7 +70,7 @@ interrupt_common_stub:
     add esp, 4          ; pop argument
     
     ; Restore state
-    popad
+    popad   ;pop all general purpose registers - double
     pop gs
     pop fs
     pop es

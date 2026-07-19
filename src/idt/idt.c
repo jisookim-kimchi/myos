@@ -102,9 +102,6 @@ void idt_init()
   {
     idt_register_interrupt_callback(i, no_interrupts_handler);
   }
-  // idt_set(0, idt_zero);
-  // //idt_set(0x20, int20h);      // 타이머 인터럽트 (IRQ 0)
-  // idt_set(0x21, int21h);      // 키보드 인터럽트 (IRQ 1)
   // idt_set(0x80, isr80h_wrapper);      // 시스템 콜
   idt_register_interrupt_callback(0, idt_zero);
   idt_register_interrupt_callback(0x20, timer_handle_interrupt);
