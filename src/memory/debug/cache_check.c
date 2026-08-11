@@ -16,14 +16,13 @@ void test_cache_speed(void)
 
     paging_4gb_chunk_t *kernel_chunk = paging_get_kernel_chunk();
 
+    paging_map(kernel_chunk, test_virt, test_phys, PAGING_PRESENT | PAGING_WRITEABLE | PAGING_CACHE_DISABLED );
+    paging_switch(kernel_chunk);
+
     for (volatile int i = 0; i < 10000; i++)
     {
         test_buffer[i & 1023] = i;
-        (void)test_buffer[i & 1023];
     }
-
-    paging_map(kernel_chunk, test_virt, test_phys, PAGING_PRESENT | PAGING_WRITEABLE | PAGING_CACHE_DISABLED );
-    paging_switch(kernel_chunk);
 
     uint64_t start_time = read_tsc();
     for (volatile int i = 0; i < 100000; i++)
@@ -37,6 +36,10 @@ void test_cache_speed(void)
     paging_map(kernel_chunk, test_virt, test_phys, PAGING_PRESENT | PAGING_WRITEABLE);
     paging_switch(kernel_chunk);
 
+    for (volatile int i = 0; i < 10000; i++)
+    {
+        test_buffer[i & 1023] = i;
+    }
     start_time = read_tsc();
     for (volatile int i = 0; i < 100000; i++)
     {
