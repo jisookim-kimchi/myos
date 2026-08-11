@@ -1,3 +1,4 @@
+#include "memory/debug/cache_check.h"
 #include "kernel.h"
 #include "idt/idt.h"
 #include "disk/disk.h"
@@ -56,7 +57,7 @@ void kernel_main()
   idt_init();
   
   //for debugging set comment
-  //timer_init(100);
+  //timer_init(100); // alarm per 10ms
 
   /*
   //0x10EC 리얼텍 제조사 번호, 0x8139 8139모델번호.
@@ -160,6 +161,8 @@ void kernel_main()
   paging_switch_to_kernel();
 
   enable_paging();
+
+  test_cache_speed();
 
   isr80h_register_command_call();
 

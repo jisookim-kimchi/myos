@@ -6,6 +6,7 @@ FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm
 		$(BUILD_DIR)/memory/memory.o $(BUILD_DIR)/idt/idt.o $(BUILD_DIR)/io/io.asm.o \
 		$(BUILD_DIR)/memory/heap/heap.o $(BUILD_DIR)/memory/heap/kernel_heap.o \
 		$(BUILD_DIR)/memory/paging/paging.o $(BUILD_DIR)/memory/paging/paging.asm.o \
+		$(BUILD_DIR)/memory/debug/cache_check.o $(BUILD_DIR)/memory/debug/cache_check.asm.o \
 		$(BUILD_DIR)/disk/disk.o $(BUILD_DIR)/disk/streamer.o $(BUILD_DIR)/filesystem/pathparser.o \
 		$(BUILD_DIR)/filesystem/file.o $(BUILD_DIR)/string/string.o $(BUILD_DIR)/filesystem/fat16.o \
 		$(BUILD_DIR)/filesystem/fat16_file_ops.o $(BUILD_DIR)/filesystem/fat16_helper.o \

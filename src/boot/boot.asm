@@ -8,10 +8,10 @@ jmp short start
 nop
 
 ;FAT16 Header
-OEMIdentifier           db 'MYOS    '
+OEMIdentifier           db 'MYOS____'
 BytesPerSector          dw 0x200
 SectorPerCluster        db 0x80
-ReservedSectorCount     dw 200 ;why not 1? 부트로더가 할수있는건 섹터읽긴데 커널을 저장할 공간을 확보하려고 200으로 설정, 커널을 파일로 두지않고 섹터에 직접 넣는다.커널을 파일로 넣는건 복잡하기때문 부트로더가 파일시스템을 알아야해
+ReservedSectorCount     dw 200
 FATCopies               db 0x02
 RootDirEntries          dw 0x40
 NumSectors              dw 0x00
@@ -45,10 +45,10 @@ step2:
 
 .load_protected:
     cli
-    lgdt[gdt_descriptor]  ; load GDT on CPU's GDTR register
+    lgdt[gdt_descriptor]  ; load GDT minsize for 16bit to change to protected mode on CPU's GDTR register 
     mov eax, cr0          ; cr0 : cpu mode setting 
     or eax, 1             ; PE 비트 설정 (Protected Mode Enable)
-    mov cr0, eax            
+    mov cr0, eax          ; change 16bit mode to 32bit 
     jmp CODE_SEG:load32   ;far jump
     jmp $
     
