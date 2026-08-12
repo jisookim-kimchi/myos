@@ -13,17 +13,18 @@ Jumps to 0x7C00 to execute the bootloader!
 
 ![LGDT Loading Debugging](image/lgdt.jpg)  
 *GDT descriptor loading via `lgdt` instruction*
+- GDT (Global Descriptor Table): a static table that defines the base address, limit, and privilege levels (Ring 0 / Ring 3) for each memory segment.
 
 ![Real Mode to Protected Mode](image/realMode_to_protectMode.jpg)  
 *CR0 PE bit 0 -> 1 and Far Jump to CS register it change to kernel code seg (offset 0x08)*  
 - The GDT is a structure defining segment registers, which can be thought of as a map showing where segments start and end.  
-- CR0 changed 0 -> 1 switches the mode to 32-bit Protected Mode.  
+- `CR0 PE` changed 0 -> 1 switches the mode to 32-bit Protected Mode.  
 However, we only changed the mode; CPU is not in the kernel yet.  
 
 1. Entering Protected Mode:  
-Loading the temporary GDT, setting the CR0 PE bit, and performing a Far Jump to 32-bit mode (`load32`).
+Loading the temporary GDT, setting the `CR0 PE bit`, and performing a Far Jump to 32-bit mode (`load32`).
 
-2. ATA LBA Loading: Bypassed BIOS interrupts and directly used the hard disk controller's I/O ports to read data, delivering 150 kernel sectors to the 1MB on RAM.
+2. `ATA LBA Loading`: Bypassed BIOS interrupts and directly used the hard disk controller's I/O ports to read data, delivering 150 kernel sectors to the 1MB on RAM.
 > It means Kernel sectors start from 1MB.  
 > It is like a flat array for sectors, each sector has 512 bytes. it allows like index access to disck sectors.  
 
@@ -42,24 +43,24 @@ Loading the temporary GDT, setting the CR0 PE bit, and performing a Far Jump to 
   0x00007C00            Bootloader (512 B)     16-bit Real Mode
   0x00000000            RAM Start Base
 ```
-#### Kernel Initialization
-##### kernel.asm
+
+### kernel.asm
 1. Initializes all segment registers to the kernel segment (0x10).
 2. Sets up the kernel stack (0x200000) so kernel stack is 0x100000 ~ 0x200000.
-3. Remaps(IRQ 0-15 -> 32-47) the PIC(Programmable Interrupt Controller)which like NVIC in ARM Cortex-M.
+3. Remaps(IRQ 0-15 -> 32-47) the `PIC`(Programmable Interrupt Controller)which like `NVIC` in `ARM Cortex-M`.
 
 ![Kernel Start](image/kernel_start.jpg)  
 > Segment registers set to 0x10 and ESP/EBP set to 0x200000 at kernel entry 0x100000.
 
 
-##### kernel.c
-1. Redefines GDT and initializes the kernel heap.
-2. Turns on IDT and I/O interrupt timer drivers.
-3. Defines TSS (Task State Segment) and configures the kernel stack (0x600000) to return to during interrupts.
-4. Searches the file system disk to recognize and prepare FAT16.
+### kernel.c
+1. Redefines `GDT` and initializes the kernel heap.
+2. Turns on `IDT` and I/O interrupt timer drivers.
+3. Defines `TSS` (Task State Segment) and configures the kernel stack (0x600000) to return to during interrupts.
+4. Searches the file system disk to recognize and prepare `FAT16`.
 5. Enables paging to manage memory in 4KB blocks and provide strict user/kernel memory isolation.
 
-Why redefine the GDT? The bootloader's GDT is a minimal map, while the kernel's GDT is a complete map containing all features needed by the kernel.
+Why redefine the `GDT`? The bootloader's GDT is a minimal map, while the kernel's GDT is a complete map containing all features needed by the kernel.
 
 ![Enable Paging](image/enable_paging.jpg)
 > CR0 PE(Protection Enable) bit -> 1, CR0 PG(Paging Enable) bit -> 1.
@@ -67,11 +68,11 @@ Why redefine the GDT? The bootloader's GDT is a minimal map, while the kernel's 
 ![tss_check](image/tss_check.jpg)
 > TR : 0x28
 
-#### TSS
-TSS: Informs the CPU of the kernel stack (esp0) to return to kernel space when an interrupt occurs in user space.
+### TSS
+`TSS`: Informs the CPU of the kernel stack (esp0) to return to kernel space when an interrupt occurs in user space.
 
 ![User to Kernel Mode Transition](image/user_to_kernel.jpg)
-> Ring 3 to Ring 0: When an interrupt (int 0x21) occurs in User Mode (CS:0x1B, SS:0x23), the CPU uses TSS esp0 to switch to the Kernel Stack (CS:0x8, SS:0x10) 0x00600000.
+> `Ring 3 to Ring 0`: When an interrupt (int 0x21) occurs in User Mode (CS:0x1B, SS:0x23), the CPU uses TSS esp0 to switch to the Kernel Stack (CS:0x08, SS:0x10) 0x00600000.
 
 ![Kernel to User Mode Transition](image/kernel_to_user_cs_ss_eip.jpg)
 > Ring 0 to Ring 3: when run `black.bin` -> Executing `iret` in Kernel Mode restores registers to enter User Mode (CS:0x1B, SS:0x23, EIP:0x10000000).
@@ -97,7 +98,7 @@ TSS: Informs the CPU of the kernel stack (esp0) to return to kernel space when a
   0x00000000            RAM Start Base
 ```
 
-#### FAT 16Disk
+### FAT 16Disk
 - File Allocation Table : a map to track file data.
 
 - Reserved Region: The area containing the boot sector and our kernel. 
@@ -115,7 +116,7 @@ Contains info like file name, extension, size, cluster position, etc. We parse t
 Think of it as actual residents.  
 Starts from cluster 2; clusters 0 and 1 are already reserved. only number 0 and 1 is reserved! (it doesn't mean that it consumes physical disk space).
 
-#### File System
+### File System
 Let's look at the structure of FAT16.
 Address (Byte) :  00    01  |  02    03  |  04    05  |  06    07  | ...
             [ Byte 0 ] [ Byte 2 ] [ Byte 4 ] [ Byte 6 ]
@@ -157,23 +158,48 @@ Why: When reading a file, you occasionally need to search the FAT table address 
 * Root Directory: Located right after the FAT 0 and 1(FAT1, FAT2). The size is fixed based on the number defined(64) in the boot sector (Root Entries) and cannot be expanded.
 * Sub-directories: Can be located anywhere in the data region (just like a normal file). The size can expand infinitely since it is connected by a cluster chain[linked list]. It is just a file with a special directory attribute (`0x10`).
 
-################################################ TODO
-##################################################
+### Paging
+> Divides physical memory into 4KB pages, providing each process with an isolated 4GB virtual address space.
 
-#### Paging
-* Virtual Memory: Even if physical RAM is small, each program is allocated a virtual memory space of 4GB.  
+* Virtual Memory: Even if physical RAM is small, each program is allocated a virtual memory space of 4GB.
 
-* Memory Isolation: Separates user space from the kernel. This is critical.
-CR3 Register: Holds the physical address of the page directory currently in use.
-This is critical for context switching.
-The moment you swap the directory address from process A's to process B's, the memory map observed by the OS changes.
-A technology mapping virtual addresses to physical addresses.
+* Memory Isolation: Separates user space from the kernel.
+
+* CR3 Register: Holds the physical address of the page directory currently in use.
+> This is critical for context switching.
+> Swapping the page directory pointer (CR3) from Process A to Process B immediately changes the active memory map.
+
+#### Cache Speed Benchmark (PCD(Page Cache Disable) Bit Control)
+![Cache Benchmark](image/cache_benchmark.jpg)  
+> **Hardware Cache Benchmark (Cache ON vs Cache OFF)**
+> Proves a **300%+ CPU cycle performance difference** (Cache OFF: ~4.6M cycles vs Cache ON: ~1.5M cycles) by controlling the `PCD (Page Cache Disable)` bit in Page Table Entries using `RDTSC` cycle-level measurement.
+
+### RDTSC ###
+
+>> CPU cycle : A single pulse of the CPU clock.
+>> CPU Clock Speed : Frequency of the CPU cycles per second.
+>> TSC : Time Stamp Counter inside the CPU chip that increments every cycle, read by the `RDTSC` instruction.  
+>> memory/debug/cache_check.c : check cpu cache
+
+**IMPORTANT : TSC and CPU cycle are not the same thing. (TSC is the hardware counter that counts CPU cycles.) Since CPU frequency changed dynamically in modern CPU, so it is not recommended to use TSC for measuring time**
+>>> `todo` : I just wanted to measure how fast a context switch takes.
+BUT! `Switching time is not always same!, not constant`... So I plan to run a loop test to measure the latency variance and time differences
+
+#### How to do mapping v-memory to physical memory? 
 Structure: Page Directory -> Page Table -> Physical Frame.
 Each process gets its own 4GB virtual memory space.
+
 The memory layout for my OS is configured in `config.h`.
 0~256MB: Kernel space.
-256~512MB: User space.
-The reason for separating kernel and user space at the 256MB boundary is security; otherwise, user-allocated memory could bleed into kernel space.
+256MB~512MB: User space.
+512MB~4GB : Unmapped Space.
+Separating kernel space (0–256MB) and user space (256–512MB) at the 256MB boundary ensures memory protection and allows fast pointer validation during system  
+> why 512MB~4GB is unmapped space? : i had to adjust to the system spec of QEMU and
+Fully mapping the entire 4GB address space would waste memory by allocating unnecessary page tables.   
+
+![Page Table Mapping & Walk Dump](image/p_mem_v_mem.jpg)  
+> **Virtual Address to Physical Address Translation (Page Table Walk Dump)**:  
+> I tested 2-level page table structure (`Page Directory Index` -> `Page Table Index` -> `Physical Frame Address`) and parsing `Page Table Entry flags` (`PRESENT`, `READ_WRITE`, `USER` / `SUPERVISOR`, `CACHE_DISABLED`) directly in hardware.
 
 Paging structure:
 Note that we manage memory in 4KB blocks per page.
@@ -188,9 +214,12 @@ Heap Table:
 Remember we manage memory in 4KB blocks.
 An array managing the kernel heap status.
 Each entry represents a 4KB memory block.
-`[ 7(NEXT)][ 6(FIRST)][ 5 ][ 4 ][ 3 ][ 2 ][ 1 ][ 0(TAKEN/FREE)]` (Other bits are currently unused, but can be added).
+`[ 7(NEXT)][ 6(FIRST)][ 5 ][ 4 ][ 3 ][ 2 ][ 1 ][ 0(TAKEN/FREE)]` (Other bits are currently unused, but can be added).  
 
 When `malloc` is called -> calculates the required blocks via `heap_calculate_required_blocks(size)` -> searches for contiguous free space that satisfies the requested size starting from the beginning of the table (Index 0) -> calls `heap_mark_blocks_as_taken()` to mark them as "taken" -> returns the address.
+
+################################################ TODO
+##################################################
 
 #### Interrupt
 When ring3 calls `int 0x80` ->

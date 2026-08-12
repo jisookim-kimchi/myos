@@ -4,6 +4,7 @@
 #include "disk/disk.h"
 #include "keyboard/keyboard.h"
 #include "memory/heap/kernel_heap.h"
+#include "memory/heap/heap.h"
 #include "memory/memory.h"
 #include "memory/paging/paging.h"
 #include "config.h"
@@ -25,6 +26,9 @@ void __attribute__((section(".entry"))) start(void)
 {
   paging_switch_to_kernel();
 }
+
+extern struct heap kernel_heap;
+  
 
 struct tss tss;
 struct gdt gdt_real[MYOS_TOTAL_GDT_SEGMENTS];
@@ -174,7 +178,7 @@ void kernel_main()
     panic("process_load failed!\n");
   }
 
-//   enable_interrupts(); // Moved up
+  //enable_interrupts(); // Moved up
   task_run_first_ever_task();
   while (1)
   {

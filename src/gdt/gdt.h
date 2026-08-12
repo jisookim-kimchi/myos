@@ -12,7 +12,7 @@ struct gdt
     uint8_t access;          // Access Byte cod or data or write or read or execute and so on
     uint8_t granularity;     // Limit (bits 16-19) & Flags
     uint8_t base_high;       // Base (bits 24-31)
-} __attribute__((packed));
+} __attribute__((packed));   // total 8 bytes
 
 //kernel version
 struct kernel_gdt

@@ -1,3 +1,4 @@
+#include "../memory/debug/cache_check.h"
 #include "task.h"
 #include "../kernel_print.h"
 #include "../config.h"
@@ -9,7 +10,8 @@
 #include "../timer/timer.h"
 #include "process.h"
 #include "tss.h"
-  
+
+uint32_t last_context_switch_cycles = 0;
 struct task *task_cur = NULL;
 struct task *task_head = NULL;
 struct task *task_tail = NULL;
@@ -195,6 +197,8 @@ void task_delete(struct task *task)
 
 int task_switch(struct task *task)
 {
+  uint64_t start_tsc = read_tsc();
+
   task_cur = task;
   paging_switch(task->page_directory);
   set_cur_process(task->process);
@@ -204,6 +208,13 @@ int task_switch(struct task *task)
   {
       tss.esp0 = (uint32_t)task->kstack + 4096;
   }
+
+  uint64_t end_tsc = read_tsc();
+  last_context_switch_cycles = (uint32_t)(end_tsc - start_tsc);
+
+  print("Context Switch TSC Ticks : ");
+  print_int(last_context_switch_cycles);
+  print("\n");
 
   return 0;
 }

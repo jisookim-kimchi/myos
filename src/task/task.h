@@ -6,6 +6,7 @@
 #include "../memory/paging/paging.h"
 struct process;
 struct interrupt_frame;
+extern uint32_t last_context_switch_cycles;
 
 enum
 {

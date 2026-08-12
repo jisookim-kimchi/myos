@@ -60,4 +60,27 @@ void test_cache_speed(void)
     print("\nCache ON: ");
     print_int(cache_on_cycles);
     print("\n====================== \n");
+
+    // Page Table Walk Dump
+    uint32_t dir_idx = 0, table_idx = 0;
+    get_paging_indexes(test_virt, &dir_idx, &table_idx);
+    uint32_t pte = paging_get(kernel_chunk->directory_entry, test_virt);
+    uint32_t phys_addr = (pte & 0xFFFFF000) | ((uint32_t)test_virt & 0xFFF);
+
+    print("\n === Page Table Walk Dump ===\n");
+    print("Virtual Address: ");
+    print_hex((uint32_t)test_virt);
+    print(" -> Page Directory Index: ");
+    print_int(dir_idx);
+    print(", Page Table Index: ");
+    print_int(table_idx);
+    print("\n -> Physical Address: ");
+    print_hex(phys_addr);
+    print(" [Flags: ");
+    print((pte & PAGING_PRESENT) ? "PRESENT" : "NOT_PRESENT");
+    print((pte & PAGING_WRITEABLE) ? ", READ_WRITE" : ", READ_ONLY");
+    print((pte & PAGING_USER_ACCESS) ? ", USER" : ", SUPERVISOR");
+    if (pte & PAGING_CACHE_DISABLED) print(", CACHE_DISABLED");
+    print("]\n=============================\n");
 }
+
