@@ -2,6 +2,7 @@
 #include "../io/io.h"
 #include "../task/task.h"
 #include "../task/process.h"
+#include "../kernel_print.h"
 
 // 0x2A: Left Shift, 0x36: Right Shift
 #define KEY_LEFT_SHIFT 0x2A
@@ -59,7 +60,7 @@ void keyboard_push(char c)
         process->keyboard.key_buffer[process->keyboard.head] = c; // 현재 head 위치에 저장
         process->keyboard.head = next_head; // head 한 칸 전진
     }
-    task_wakeup(&process->keyboard);
+    task_wakeup((void*)&process->keyboard);
 }
 
 char keyboard_pop()

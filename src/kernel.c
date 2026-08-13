@@ -61,7 +61,7 @@ void kernel_main()
   idt_init();
   
   //for debugging set comment
-  //timer_init(100); // alarm per 10ms
+  timer_init(100); // alarm per 10ms
 
   /*
   //0x10EC 리얼텍 제조사 번호, 0x8139 8139모델번호.
@@ -132,7 +132,6 @@ void kernel_main()
   */
 
 
-
   ft_memset(&tss, 0x00, sizeof(tss));
   // [TSS 설정: 커널의 안전 가옥(Safe House) 지정]
   tss.esp0 = 0x600000;
@@ -144,21 +143,21 @@ void kernel_main()
   disk_search_and_init();
 
   // --- FAT16 Write Test ---
-  int fd = fopen("0:/test2.txt", "w");
-  if (fd <= 0)
-  {
-    print("Failed to open file for writing\n");
-  }
-  else
-  {
-    char *data = "Hello world!\n";
-    int written = fwrite(data, 1, ft_strlen(data), fd);
-    print("Written bytes: ");
-    print_int(written);
-    print("\n");
-    fclose(fd);
-    print("File closed.\n");
-  }
+  // int fd = fopen("0:/test2.txt", "w");
+  // if (fd <= 0)
+  // {
+  //   print("Failed to open file for writing\n");
+  // }
+  // else
+  // {
+  //   char *data = "Hello world!\n";
+  //   int written = fwrite(data, 1, ft_strlen(data), fd);
+  //   print("Written bytes: ");
+  //   print_int(written);
+  //   print("\n");
+  //   fclose(fd);
+  //   print("File closed.\n");
+  // }
 
   paging_init_kernel_4gb(PAGING_PRESENT | PAGING_WRITEABLE | PAGING_USER_ACCESS);
 
@@ -166,19 +165,22 @@ void kernel_main()
 
   enable_paging();
 
-  test_cache_speed();
+  //test_cache_speed();
 
   isr80h_register_command_call();
 
   struct process *process = 0;
-  int res = process_load("0:/blank.bin", &process);
-  //int res = process_load("0:/shell.bin", &process);
+  //int res = process_load("0:/blank.bin", &process);
+  int res = process_load("0:/shell.bin", &process);
   if (res < 0)
   {
     panic("process_load failed!\n");
   }
+  else
+  {
+    keyboard_set_focus(process);
+  }
 
-  //enable_interrupts(); // Moved up
   task_run_first_ever_task();
   while (1)
   {

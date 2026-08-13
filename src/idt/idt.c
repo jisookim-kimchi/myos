@@ -19,9 +19,6 @@ static ISR80_COMMAND isr80h_commands[MYOS_MAX_ISR80H_COMMANDS];
 extern void *interrupt_table[MYOS_TOTAL_INTERRUPTS];
 
 extern void idt_load(struct idtr *ptr);
-//extern void int21h();
-//extern void int20h();
-//extern void isr80h_wrapper();
 extern void no_interrupts();
 extern uint32_t get_faulting_address();
 

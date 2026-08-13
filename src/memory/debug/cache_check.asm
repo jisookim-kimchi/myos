@@ -1,6 +1,6 @@
-global read_tsc
+section .asm
 
-section .text
+global read_tsc
 
 read_tsc:
     rdtsc

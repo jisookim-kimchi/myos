@@ -3,7 +3,7 @@ BIN_DIR := ./bin
 SRC_DIR := ./src
 
 FILES = $(BUILD_DIR)/kernel.asm.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/idt/idt.asm.o \
-		$(BUILD_DIR)/memory/memory.o $(BUILD_DIR)/idt/idt.o $(BUILD_DIR)/io/io.asm.o \
+		$(BUILD_DIR)/memory/memory.o $(BUILD_DIR)/idt/idt.o $(BUILD_DIR)/io/io.asm.o $(BUILD_DIR)/io/cursor.asm.o \
 		$(BUILD_DIR)/memory/heap/heap.o $(BUILD_DIR)/memory/heap/kernel_heap.o \
 		$(BUILD_DIR)/memory/paging/paging.o $(BUILD_DIR)/memory/paging/paging.asm.o \
 		$(BUILD_DIR)/memory/debug/cache_check.o $(BUILD_DIR)/memory/debug/cache_check.asm.o \

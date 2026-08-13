@@ -4,6 +4,7 @@
 uint16_t *video_memory = 0;
 uint16_t terminal_row = 0;
 uint16_t terminal_column = 0;
+extern void cursor_update(uint32_t pos);
 
 uint16_t terminal_make_char(char c, uint8_t color)
 {
@@ -64,6 +65,8 @@ void terminal_write_char(char c, uint8_t color)
       terminal_scroll();
     }
   }
+  uint32_t pos = (terminal_row * VGA_WIDTH) + terminal_column;
+  cursor_update(pos);
 }
 
 void init_terminal()

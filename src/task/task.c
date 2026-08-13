@@ -273,9 +273,9 @@ void *task_get_stack_item(struct task *task, int index)
 
 void task_run_first_ever_task()
 {
-  print("Kernel: task_run_first_ever_task: task_cur=");
-  print_int((uint32_t)(uintptr_t)task_cur);
-  print("\n");
+  //print("Kernel: task_run_first_ever_task: task_cur=");
+  //print_int((uint32_t)(uintptr_t)task_cur);
+  //print("\n");
   if (!task_cur)
   {
     panic("task_run_first_ever_task(): No current task exists!\n");
