@@ -70,7 +70,7 @@ void page_fault_handler(struct interrupt_frame* frame)
   }
 
   uint32_t aligned_addr = faulting_address & 0xFFFFF000;
-  int res = paging_map(proc->task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
+  int res = paging_map(proc->main_task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
   if (res < 0)
   {
     panic("page_fault_handler() failed to map page");

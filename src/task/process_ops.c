@@ -19,12 +19,18 @@ int process_exit(int exit_code)
       p->allocations[i] = NULL;
     }
   }
-
-  p->task->state = TASK_ZOMBIE;
+  for (int i = 0; i < p->num_activated_tasks; i++)
+  {
+    if (p->task[i])
+      p->task[i]->state = TASK_ZOMBIE;
+  }
+  if (p->main_task)
+    p->main_task->state = TASK_ZOMBIE;
+  
   if (p->parent_id >= 0)
   {
     struct process *parent = get_process(p->parent_id);
-    if (parent && parent->task)
+    if (parent && parent->main_task)
     {
       task_wakeup_by_event(parent);
     }
@@ -44,7 +50,6 @@ int process_exit(int exit_code)
   }
 }
 
-
 int process_wait(int *status)
 {
   struct process *current = get_cur_process();
@@ -63,7 +68,7 @@ int process_wait(int *status)
       if (proc->parent_id == current->id)
       {
         have_children = 1;
-        if (proc->task->state == TASK_ZOMBIE)
+        if (proc->main_task && proc->main_task->state == TASK_ZOMBIE)
         {
           if (status)
           {
@@ -71,7 +76,16 @@ int process_wait(int *status)
           }
           int pid = proc->id;
 
-          task_delete(proc->task);
+          for (int t = 0; t < proc->num_activated_tasks; t++)
+          {
+            if (proc->task[t])
+            {
+              task_delete(proc->task[t]);
+              proc->task[t] = NULL;
+            }
+          }
+          proc->main_task = NULL;
+
           kernel_free(proc->stack);
           kernel_free(proc);
           processes[i] = NULL;
@@ -80,7 +94,6 @@ int process_wait(int *status)
         }
       }
     }
-
     if (!have_children)
     {
       return -MYOS_INVALID_ARG;
@@ -119,7 +132,7 @@ void *process_sbrk(struct process *proc, int amounts)
         {
           return (void *)-1;
         }
-        paging_map_to(proc->task->page_directory, (void *)addr, phys,
+        paging_map_to(proc->main_task->page_directory, (void *)addr, phys,
                       (void *)(addr + PAGING_PAGE_SIZE_BYTES),
                       PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
       }

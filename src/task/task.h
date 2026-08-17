@@ -64,7 +64,7 @@ struct task
 int init_task(struct task* task, struct process* process);
 void task_add_head(struct task *t);
 void task_add_tail(struct task *t);
-struct task* new_task(struct process* process);
+struct task* main_task_create(struct process* process);
 struct task* get_cur_task(void);
 struct task* get_next_task(void);
 void task_delete(struct task* task);
@@ -88,4 +88,6 @@ void task_block(void *event_wait_channel);
 void task_wakeup_by_event(void *event_wait_channel);
 void task_sleep_until(int wait_ticks);
 void task_wakeup_by_ticks(uint32_t cur_tick);
+
+struct task *task_create(struct process *proc, void *entry_point, void *user_stack);
 #endif

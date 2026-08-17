@@ -290,7 +290,7 @@ Assigning fixed priorities to each task (important in embedded systems), or rese
 Puts the page directory address of the new task into the CR3 register.
 At this moment, the virtual memory space observed by the CPU instantly changes from Task A's world to Task B's world (code region and 16KB stack are swapped).
 4. Privilege Recovery (TSS Update):
-`tss.esp0 = new_task->kstack + 4096`.
+`tss.esp0 = main_task_create->kstack + 4096`.
 TSS (Task State Segment): Informs the CPU of the kernel stack (Ring 0) to use when an interrupt occurs in user mode (Ring 3).
 Since each task has its own kernel stack, the TSS must be updated on every switch!
 

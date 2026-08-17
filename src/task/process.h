@@ -14,7 +14,7 @@ struct process
     struct task *task[MYOS_MAX_TASKS];
     uint8_t num_activated_tasks;
     struct task *main_task;
-    
+
 
     //in a process you can malloc ans ask to the kernel memory
     //to track allocated memory
@@ -48,7 +48,6 @@ int process_load_data(const char* filename, struct process* process);
 struct process* get_process(int pid);
 struct process* get_cur_process();
 int get_process_free_slot();
-void set_cur_process(struct process* process);
 void* process_sbrk(struct process* proc, int increment);
 int process_load(const char *filename, struct process **process);
 int process_exit(int exit_code);

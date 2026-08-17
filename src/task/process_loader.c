@@ -70,7 +70,7 @@ int process_map_binary(struct process *proc)
   void *virtual_addr = proc->virtual_base_address
                            ? proc->virtual_base_address
                            : (void *)MYOS_PROGRAM_VIRTUAL_ADDRESS;
-  res = paging_map_to(proc->task->page_directory, virtual_addr, proc->ptr,
+  res = paging_map_to(proc->main_task->page_directory, virtual_addr, proc->ptr,
                       paging_align_address(proc->ptr + proc->size),
                       PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
   return res;
@@ -86,7 +86,7 @@ int process_map_virtual_memory(struct process *process)
   }
 
   paging_map_to(
-      process->task->page_directory,
+      process->main_task->page_directory,
       (void *)MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_END, process->stack,
       paging_align_address(process->stack + MYOS_USER_PROGRAM_STACK_SIZE),
       PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
@@ -175,7 +175,7 @@ void process_setup_arguments(struct process *process, const char *command_line)
 
     int arg_len = ft_strlen(arg) + 1;
     virtual_stack_ptr -= arg_len;
-    copy_to_task(process->task, arg, (void *)virtual_stack_ptr, arg_len);
+    copy_to_task(process->main_task, arg, (void *)virtual_stack_ptr, arg_len);
     arg_vaddrs[i] = virtual_stack_ptr;
     kernel_free(arg);
   }
@@ -186,21 +186,21 @@ void process_setup_arguments(struct process *process, const char *command_line)
 
   for (int i = 0; i < argc; i++)
   {
-    copy_to_task(process->task, &arg_vaddrs[i], (void *)argv_base + (i * 4), 4);
+    copy_to_task(process->main_task, &arg_vaddrs[i], (void *)argv_base + (i * 4), 4);
   }
 
   uint32_t null_ptr = 0;
-  copy_to_task(process->task, &null_ptr, (void *)argv_base + (argc * 4), 4);
+  copy_to_task(process->main_task, &null_ptr, (void *)argv_base + (argc * 4), 4);
 
   virtual_stack_ptr -= 4;
-  copy_to_task(process->task, &argv_base, (void *)virtual_stack_ptr, 4);
+  copy_to_task(process->main_task, &argv_base, (void *)virtual_stack_ptr, 4);
   virtual_stack_ptr -= 4;
-  copy_to_task(process->task, &argc, (void *)virtual_stack_ptr, 4);
+  copy_to_task(process->main_task, &argc, (void *)virtual_stack_ptr, 4);
 
   // Dummy return address for C calling convention
   virtual_stack_ptr -= 4;
   uint32_t dummy_ret = 0;
-  copy_to_task(process->task, &dummy_ret, (void *)virtual_stack_ptr, 4);
+  copy_to_task(process->main_task, &dummy_ret, (void *)virtual_stack_ptr, 4);
 
-  process->task->regs.esp = virtual_stack_ptr;
+  process->main_task->regs.esp = virtual_stack_ptr;
 }

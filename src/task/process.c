@@ -3,8 +3,6 @@
 #include "../memory/memory.h"
 #include "../string/string.h"
 
-struct process *cur_process = NULL;
-
 struct process *processes[MYOS_MAX_PROCESSES] = {};
 
 static void process_init(struct process *process)
@@ -17,7 +15,10 @@ static void process_init(struct process *process)
 
 struct process *get_cur_process()
 {
-  return cur_process;
+  struct task *cur_task = get_cur_task();
+  if (!cur_task)
+    return NULL;
+  return cur_task->process;
 }
 
 struct process *get_process(int pid)
@@ -27,11 +28,6 @@ struct process *get_process(int pid)
     return NULL;
   }
   return processes[pid];
-}
-
-void set_cur_process(struct process *process)
-{
-  cur_process = process;
 }
 
 int get_process_free_slot()
@@ -71,7 +67,7 @@ int process_load_for_slot(const char *filename, struct process **process, int pi
     return -MYOS_ERROR_NO_MEMORY;
   }
 
-  struct task *t = new_task(proc);
+  struct task *t = main_task_create(proc);
   if (!t)
   {
     kernel_free(stack_ptr);
@@ -108,12 +104,14 @@ int process_load_for_slot(const char *filename, struct process **process, int pi
   // it will start executing from the entry point
   if (proc->elf_entry_point)
   {
-    proc->task->regs.ip = (uint32_t)proc->elf_entry_point;
+    t->regs.ip = (uint32_t)proc->elf_entry_point;
   }
 
   ft_strlcpy(proc->filename, binary_name, sizeof(proc->filename));
   proc->id = pid;
-  proc->task = t;
+  proc->task[0] = t; 
+  proc->main_task = t;          
+  proc->num_activated_tasks = 1; 
   proc->stack = stack_ptr;
 
   //if elf, has virtual address, use it

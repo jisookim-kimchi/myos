@@ -59,7 +59,7 @@ void task_add_tail(struct task *t)
   task_tail = t;
 }
 
-struct task *new_task(struct process *proc)
+struct task *main_task_create(struct process *proc)
 {
   //allocate kernel_stack(4kb)
   int slot = get_free_task_slot();
@@ -97,10 +97,56 @@ struct task *new_task(struct process *proc)
   if (task_cur == NULL)
   {
     task_cur = task;
-    //print("Kernel: new_task: task_cur set to ");
+    //print("Kernel: main_task_create: task_cur set to ");
     //print_int((uint32_t)(uintptr_t)task_cur);
     //print("\n");
   }
+  return task;
+}
+
+//sub task create.
+struct task *task_create(struct process *proc, void *entry_point, void *user_stack)
+{
+  if (!proc || !proc->main_task)
+  {
+    return NULL;
+  }
+
+  if (proc->num_activated_tasks >= MYOS_MAX_TASKS)
+  {
+    return NULL;
+  }
+
+  int slot = get_free_task_slot();
+  if (slot < 0)
+  {
+    return NULL;
+  }
+
+  struct task *task = &task_table[slot];
+  if (task->process != NULL)
+  {
+    return NULL;
+  }
+
+  task->page_directory = proc->main_task->page_directory;
+  task->kstack = &task_kernel_stacks[slot][0];
+
+  if (init_task(task, proc) < 0)
+  {
+    task->page_directory = NULL;
+    task->process = NULL;
+    task->kstack = NULL;
+    return NULL;
+  }
+
+  task->regs.ip = (uint32_t)entry_point;
+  task->regs.esp = (uint32_t)user_stack;
+  task->state = TASK_READY;
+
+  task_add_tail(task);
+  proc->task[proc->num_activated_tasks++] = task;
+
   return task;
 }
 
@@ -152,6 +198,7 @@ struct task *get_next_task()
       if (!t) t = task_head;
       if (t == start_task) break;
   }
+  //TODO think
   // if (task_cur && task_cur->state == TASK_RUNNING)
   //   return task_cur;
   return task_cur;
@@ -159,21 +206,22 @@ struct task *get_next_task()
 
 void schedule(void)
 {
-   if (!task_cur)
+   struct task *cur_task = get_cur_task();
+   if (!cur_task)
         return;
     struct task *next = get_next_task();
-    if (!next || next == task_cur)
+    if (!next || next == cur_task)
     {
-        while (task_cur->state == TASK_BLOCKED)
+        while (cur_task->state == TASK_BLOCKED)
         {
             enable_interrupts();
             halt();
         }
         return;
     }
-    if (task_cur->state == TASK_RUNNING)
+    if (cur_task->state == TASK_RUNNING)
     {
-        task_cur->state = TASK_READY;
+        cur_task->state = TASK_READY;
     }
     next->state = TASK_RUNNING;
     task_switch(next);
@@ -208,7 +256,20 @@ void task_delete(struct task *task)
 
   if (task == task_cur)
     task_cur = task->next;
-  paging_free_4gb(task->page_directory);
+
+  //only main task can free the page directory
+  if (task->process && task->process->main_task == task)
+  {
+    if (task->page_directory)
+    {
+      paging_free_4gb(task->page_directory);
+      task->page_directory = NULL;
+    }
+  }
+
+  task->process = NULL;
+  task->kstack = NULL;
+  task->state = TASK_DEAD;
 }
 
 int task_switch(struct task *task)
@@ -217,7 +278,6 @@ int task_switch(struct task *task)
 
   task_cur = task;
   paging_switch(task->page_directory);
-  set_cur_process(task->process);
 
   // save kernel stack pointer.
   if (task->kstack)
@@ -296,7 +356,7 @@ void task_run_first_ever_task()
   {
     panic("task_run_first_ever_task(): No current task exists!\n");
   }
-
+  task_head->state = TASK_RUNNING;
   task_switch(task_head);
   task_return(&task_head->regs);
 }
