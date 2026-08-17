@@ -11,7 +11,10 @@ struct process
     uint16_t id;
     char filename[MYOS_MAX_PATH_LENGTH];
     
-    struct task *task;
+    struct task *task[MYOS_MAX_TASKS];
+    uint8_t num_activated_tasks;
+    struct task *main_task;
+    
 
     //in a process you can malloc ans ask to the kernel memory
     //to track allocated memory

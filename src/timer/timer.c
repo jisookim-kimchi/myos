@@ -28,7 +28,7 @@ void timer_handle_interrupt(struct interrupt_frame *frame)
 {
   tick++;
 
-  task_run_scheduled_tasks(tick);
+  task_wakeup_by_ticks(tick);
 
   // Round Robin Scheduler
   // Only switch if we have a current task (multitasking initialized)
@@ -52,14 +52,18 @@ void timer_handle_interrupt(struct interrupt_frame *frame)
       struct task* next_task = get_next_task();
       if (next_task && next_task != current_task)
       {
-          next_task->ticks_usage = 0;
-          save_registers(frame);
-          task_switch(next_task);
-          task_return(&next_task->regs);
+        if (current_task->state == TASK_RUNNING)
+        {
+            current_task->state = TASK_READY;
+        }
+        next_task->state = TASK_RUNNING;
+        next_task->ticks_usage = 0;
+        save_registers(frame);
+        task_switch(next_task);
+        task_return(&next_task->regs);
       }
   }
   
-
   if (tick % 100 == 0)
   {
     struct task* t = get_cur_task();

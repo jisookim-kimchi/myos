@@ -56,6 +56,10 @@ void page_fault_handler(struct interrupt_frame* frame)
     
   if (!valid || !proc)
   {
+    print_hex(faulting_address);
+    print("\nError Code: ");
+    print_hex(frame->error_code);
+    print("\n");
     panic("segmentation fault (out of bounds access)");
   }
 

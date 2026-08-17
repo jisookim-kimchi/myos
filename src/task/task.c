@@ -16,27 +16,11 @@ struct task *task_cur = NULL;
 struct task *task_head = NULL;
 struct task *task_tail = NULL;
 extern struct tss tss;
+static struct task task_table[MYOS_MAX_TASKS];
+static uint8_t task_kernel_stacks[MYOS_MAX_TASKS][4096]; //total 768kb
 
 int init_task(struct task *task, struct process *proc)
 {
-  ft_memset(task, 0, sizeof(struct task));
-
-  // add paging_writeable so kernel can write to stack after switching CR3
-  task->page_directory =
-      paging_new_4gb(PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
-  if (!task->page_directory)
-  {
-    return -MYOS_ERROR_NO_MEMORY;
-  }
-
-  // Allocate kernel stack
-  task->kstack = kernel_malloc(4096);
-  if (!task->kstack)
-  {
-      paging_free_4gb(task->page_directory);
-      return -MYOS_ERROR_NO_MEMORY;
-  }
-
   task->priority = TASK_PRIORITY_MEDIUM;
   task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
   task->regs.ss = MYOS_USER_DATA_SEGMENT;
@@ -44,7 +28,12 @@ int init_task(struct task *task, struct process *proc)
   task->regs.esp = MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_START;
   task->regs.flags = 0x202;
   task->process = proc;
-  task->state = TASK_RUNNING;
+  task->state = TASK_READY; 
+  task->ticks_usage = 0;
+  task->event_wait_channel = NULL;
+  task->sleep_expiry = 0;
+  task->prev = NULL;
+  task->next = NULL;
   return 0;
 }
 
@@ -72,16 +61,38 @@ void task_add_tail(struct task *t)
 
 struct task *new_task(struct process *proc)
 {
-  struct task *task = (struct task *)kernel_malloc(sizeof(struct task));
-  if (!task)
+  //allocate kernel_stack(4kb)
+  int slot = get_free_task_slot();
+  if (slot < 0)
   {
     return NULL;
   }
+  struct task *task = &task_table[slot];
+
+  //already linked process.
+  if (task->process != NULL)
+  {
+    return NULL;
+  }
+
+  // add paging_writeable so kernel can write to stack after switching CR3
+  task->page_directory =
+      paging_new_4gb(PAGING_PRESENT | PAGING_USER_ACCESS | PAGING_WRITEABLE);
+  if (!task->page_directory)
+  {
+    task->kstack = NULL;
+    return NULL;
+  }
+
+  task->kstack = &task_kernel_stacks[slot][0];
   if (init_task(task, proc) < 0)
   {
-    kernel_free(task);
+    paging_free_4gb(task->page_directory);
+    task->process = NULL;
+    task->kstack = NULL;
     return NULL;
   }
+
   task_add_tail(task);
   if (task_cur == NULL)
   {
@@ -109,7 +120,18 @@ struct task *get_next_task()
 
   while (1)
   {
-      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_HIGH)
+      if (t->state == TASK_READY && t->priority == TASK_PRIORITY_HIGH)
+      {
+          return t;
+      }
+      t = t->next;
+      if (!t) t = task_head;
+      if (t == start_task) break;
+  }
+  t = start_task;
+  while (1)
+  {
+      if (t->state == TASK_READY && t->priority == TASK_PRIORITY_MEDIUM)
       {
           return t;
       }
@@ -122,7 +144,7 @@ struct task *get_next_task()
 
   while (1)
   {
-      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_MEDIUM)
+      if (t->state == TASK_READY && t->priority == TASK_PRIORITY_LOW)
       {
           return t;
       }
@@ -130,51 +152,46 @@ struct task *get_next_task()
       if (!t) t = task_head;
       if (t == start_task) break;
   }
-
-  t = start_task;
-
-  while (1)
-  {
-      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_LOW)
-      {
-          return t;
-      }
-      t = t->next;
-      if (!t) t = task_head;
-      if (t == start_task) break;
-  }
-
+  // if (task_cur && task_cur->state == TASK_RUNNING)
+  //   return task_cur;
   return task_cur;
+}
+
+void schedule(void)
+{
+   if (!task_cur)
+        return;
+    struct task *next = get_next_task();
+    if (!next || next == task_cur)
+    {
+        while (task_cur->state == TASK_BLOCKED)
+        {
+            enable_interrupts();
+            halt();
+        }
+        return;
+    }
+    if (task_cur->state == TASK_RUNNING)
+    {
+        task_cur->state = TASK_READY;
+    }
+    next->state = TASK_RUNNING;
+    task_switch(next);
+    task_return(&next->regs);
 }
 
 void task_block(void *event_wait_channel)
 {
   task_cur->state = TASK_BLOCKED;
   task_cur->event_wait_channel = event_wait_channel;
-  
-  // 타이머 인터럽트 발생
-  // 인터럽트 핸들러가 현재 상태(레지스터)를 싹 저장하고
-  // 다음 태스크의 레지스터를 불러와서 완벽하게 교체
-  while (task_cur->state == TASK_BLOCKED)
-  {
-      enable_interrupts();
-      halt();
-  }
+  schedule();
 }
 
 void task_sleep_until(int wait_ticks)
 {
   task_cur->sleep_expiry = get_tick() + wait_ticks;
   task_cur->state = TASK_BLOCKED;
-  
-  // 타이머 인터럽트 발생
-  // 인터럽트 핸들러가 현재 상태(레지스터)를 싹 저장하고
-  // 다음 태스크의 레지스터를 불러와서 완벽하게 교체
-  while (task_cur->state == TASK_BLOCKED)
-  {
-      enable_interrupts();
-      halt();
-  }
+  schedule(); 
 }
 
 void task_delete(struct task *task)
@@ -192,7 +209,6 @@ void task_delete(struct task *task)
   if (task == task_cur)
     task_cur = task->next;
   paging_free_4gb(task->page_directory);
-  kernel_free(task);
 }
 
 int task_switch(struct task *task)
@@ -387,7 +403,7 @@ int copy_from_task(struct task *task, void *user_buf, void *kernel_buf, int size
   return 0;
 }
 
-void task_wakeup(void *event_wait_channel)
+void task_wakeup_by_event(void *event_wait_channel)
 {
   struct task *t = task_head;
   if (!t)
@@ -397,16 +413,14 @@ void task_wakeup(void *event_wait_channel)
     if (t->state == TASK_BLOCKED &&
         t->event_wait_channel == event_wait_channel)
     {
-      t->state = TASK_RUNNING;
+      t->state = TASK_READY;
       t->event_wait_channel = NULL;
     }
     t = t->next;
   }
 }
 
-
-
-void task_run_scheduled_tasks(uint32_t cur_tick)
+void task_wakeup_by_ticks(uint32_t cur_tick)
 {
   struct task *task = task_head;
   if (!task)
@@ -418,9 +432,21 @@ void task_run_scheduled_tasks(uint32_t cur_tick)
         task->sleep_expiry > 0 &&
         cur_tick >= task->sleep_expiry)
     {
-      task->state = TASK_RUNNING;
+      task->state = TASK_READY;
       task->sleep_expiry = 0;
     }
     task = task->next;
   }
+}
+
+int get_free_task_slot(void)
+{
+    for (int i = 0; i < MYOS_MAX_TASKS; i++)
+    {
+        if (task_table[i].process == NULL)
+        {
+            return i;
+        }
+    }
+    return -MYOS_ERROR_NO_MEMORY; //task table is full.
 }

@@ -11,7 +11,7 @@ int process_exit(int exit_code)
   }
 
   p->exit_code = exit_code;
-  for (int i = 0; i < MYOS_MAX_FILE_DESCRIPTORS; i++)
+  for (int i = 0; i < MYOS_MAX_ALLOCATIONS; i++)
   {
     if (p->allocations[i])
     {
@@ -26,7 +26,7 @@ int process_exit(int exit_code)
     struct process *parent = get_process(p->parent_id);
     if (parent && parent->task)
     {
-      task_wakeup(parent);
+      task_wakeup_by_event(parent);
     }
   }
 

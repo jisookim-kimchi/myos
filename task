@@ -1,0 +1,922 @@
+/home/jisookim/myos/src/kernel.asm:34:    mov al, 0x20        ; ICW2: Master PIC offset (32-39)
+/home/jisookim/myos/src/kernel.asm:36:    mov al, 0x28        ; ICW2: Slave PIC offset (40-47)  
+/home/jisookim/myos/src/kernel.asm:39:    mov al, 00000100b   ; ICW3: Master - IRQ2 connects to Slave
+/home/jisookim/myos/src/kernel.asm:41:    mov al, 00000010b   ; ICW3: Slave - cascade identity = 2
+/home/jisookim/myos/src/kernel.asm:66:times 512-($ -$$) db 0 
+/home/jisookim/myos/src/gdt/gdt.c:10:        uint8_t flags = 0x40; // 0x40 = 0100 0000 (G=0, D/B=1) - 1 byte granularity, 32-bit mode
+/home/jisookim/myos/src/gdt/gdt.c:22:            flags = 0xC0; // 0xC0 = 1100 0000 (G=1, D/B=1) - 4KB granularity, 32-bit mode
+/home/jisookim/myos/src/gdt/gdt.c:30:        // Limit 16-19 bits + Flags
+/home/jisookim/myos/src/gdt/gdt.h:9:    uint16_t limit_low;      // Limit (bits 0-15)
+/home/jisookim/myos/src/gdt/gdt.h:10:    uint16_t base_low;       // Base (bits 0-15)
+/home/jisookim/myos/src/gdt/gdt.h:11:    uint8_t base_middle;     // Base (bits 16-23)
+/home/jisookim/myos/src/gdt/gdt.h:13:    uint8_t granularity;     // Limit (bits 16-19) & Flags
+/home/jisookim/myos/src/gdt/gdt.h:14:    uint8_t base_high;       // Base (bits 24-31)
+/home/jisookim/myos/src/memory/memory.c:32:            return (int)(p1[i] - p2[i]);
+/home/jisookim/myos/src/memory/paging/paging.c:78:    chunk_4gb->directory_entry = dir;
+/home/jisookim/myos/src/memory/paging/paging.c:84:    return chunk->directory_entry;
+/home/jisookim/myos/src/memory/paging/paging.c:90:    paging_load_dir(dir->directory_entry);
+/home/jisookim/myos/src/memory/paging/paging.c:91:    cur_dir = dir->directory_entry;
+/home/jisookim/myos/src/memory/paging/paging.c:105:        res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/paging/paging.c:129:        uint32_t entry = chunk->directory_entry[i];
+/home/jisookim/myos/src/memory/paging/paging.c:134:    kernel_free(chunk->directory_entry);
+/home/jisookim/myos/src/memory/paging/paging.c:142:        return (void*)((uint32_t)ptr + PAGING_PAGE_SIZE_BYTES - ((uint32_t)ptr % PAGING_PAGE_SIZE_BYTES));
+/home/jisookim/myos/src/memory/paging/paging.c:152:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/paging/paging.c:168:            return -MYOS_IO_ERROR; // Out of memory
+/home/jisookim/myos/src/memory/paging/paging.c:185:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/paging/paging.c:189:    return paging_set(directory->directory_entry, virt, phys_addr | flags);
+/home/jisookim/myos/src/memory/paging/paging.c:208:    return ((uintptr_t)addr % PAGING_PAGE_SIZE_BYTES) ? -MYOS_INVALID_ARG : 0;
+/home/jisookim/myos/src/memory/paging/paging.c:218:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/paging/paging.c:223:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/memory/paging/paging.c:226:    uint32_t total_bytes = phys_end - phys;
+/home/jisookim/myos/src/memory/debug/cache_check.asm:7:    ;eax = low , edx = high, since rdtsc is 64-bit instruction
+/home/jisookim/myos/src/memory/debug/cache_check.c:34:    uint32_t cache_off_cycles = (uint32_t)(end_time - start_time);
+/home/jisookim/myos/src/memory/debug/cache_check.c:50:    uint32_t cache_on_cycles = (uint32_t)(end_time - start_time);
+/home/jisookim/myos/src/memory/debug/cache_check.c:67:    uint32_t pte = paging_get(kernel_chunk->directory_entry, test_virt);
+/home/jisookim/myos/src/memory/debug/cache_check.c:73:    print(" -> Page Directory Index: ");
+/home/jisookim/myos/src/memory/debug/cache_check.c:77:    print("\n -> Physical Address: ");
+/home/jisookim/myos/src/memory/heap/heap.c:8:    size_t table_size = (size_t)(end - ptr); //104857600 - 0x01000000 = 100MB
+/home/jisookim/myos/src/memory/heap/heap.c:10:    if (table->total_size < total_blocks)
+/home/jisookim/myos/src/memory/heap/heap.c:12:        res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/heap/heap.c:34:        res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/heap/heap.c:38:    heap->start_address = ptr;
+/home/jisookim/myos/src/memory/heap/heap.c:39:    heap->table = table;
+/home/jisookim/myos/src/memory/heap/heap.c:40:    //heap->last_block = 0;
+/home/jisookim/myos/src/memory/heap/heap.c:46:    size_t table_size = (sizeof(HEAP_BLOCK_TABLE_ENTRY) * table->total_size);
+/home/jisookim/myos/src/memory/heap/heap.c:47:    ft_memset(table->entries, HEAP_BLOCK_TABLE_ENTRY_FREE, table_size);
+/home/jisookim/myos/src/memory/heap/heap.c:54:    return (size + MYOS_HEAP_BLOCK_SIZE - 1) / MYOS_HEAP_BLOCK_SIZE;
+/home/jisookim/myos/src/memory/heap/heap.c:64:    heap_table_t* heap_table = heap->table;
+/home/jisookim/myos/src/memory/heap/heap.c:66:    int bs = -1;
+/home/jisookim/myos/src/memory/heap/heap.c:67:    for (size_t i = 0; i < heap_table->total_size; i++)
+/home/jisookim/myos/src/memory/heap/heap.c:69:        if (heap_get_entry_type(heap_table->entries[i]) != HEAP_BLOCK_TABLE_ENTRY_FREE)
+/home/jisookim/myos/src/memory/heap/heap.c:72:            bs = -1;
+/home/jisookim/myos/src/memory/heap/heap.c:77:        if (bs == -1)
+/home/jisookim/myos/src/memory/heap/heap.c:90:        return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/memory/heap/heap.c:100:    if (start_block >= heap->table->total_size)
+/home/jisookim/myos/src/memory/heap/heap.c:102:    return (char*)heap->start_address + (start_block * MYOS_HEAP_BLOCK_SIZE);
+/home/jisookim/myos/src/memory/heap/heap.c:108:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/heap/heap.c:109:    if (addr < heap->start_address)
+/home/jisookim/myos/src/memory/heap/heap.c:110:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/memory/heap/heap.c:112:    size_t offset = (size_t)((char*)addr - (char*)heap->start_address);
+/home/jisookim/myos/src/memory/heap/heap.c:120:    heap_table_t* heap_table = heap->table;
+/home/jisookim/myos/src/memory/heap/heap.c:123:    if (!(heap_table->entries[start_block] & HEAP_BLOCK_IS_FIRST))
+/home/jisookim/myos/src/memory/heap/heap.c:129:    while (cur < (int)heap_table->total_size)
+/home/jisookim/myos/src/memory/heap/heap.c:131:        HEAP_BLOCK_TABLE_ENTRY entry = heap_table->entries[cur];
+/home/jisookim/myos/src/memory/heap/heap.c:132:        heap_table->entries[cur] = HEAP_BLOCK_TABLE_ENTRY_FREE;
+/home/jisookim/myos/src/memory/heap/heap.c:148:    int end_block_index = (start_block + total_blocks) - 1;
+/home/jisookim/myos/src/memory/heap/heap.c:155:    heap->table->entries[start_block] = entry;
+/home/jisookim/myos/src/memory/heap/heap.c:163:        heap->table->entries[i] = entry;
+/home/jisookim/myos/src/memory/heap/heap.h:19:    - entries: Pointer to an array of block entry status bytes (1 byte --> 4KB)
+/home/jisookim/myos/src/memory/heap/heap.h:20:    - total_size: The total number of blocks in the heap.
+/home/jisookim/myos/src/kernel.c:98:  icmp->type = 8;
+/home/jisookim/myos/src/kernel.c:99:  icmp->code = 0;
+/home/jisookim/myos/src/kernel.c:100:  icmp->id = 1;
+/home/jisookim/myos/src/kernel.c:101:  icmp->sequence = 1;
+/home/jisookim/myos/src/kernel.c:102:  icmp->checksum = 0;
+/home/jisookim/myos/src/kernel.c:145:  // --- FAT16 Write Test ---
+/home/jisookim/myos/src/keyboard/keyboard.c:15:    0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
+/home/jisookim/myos/src/keyboard/keyboard.c:46:            process = get_cur_task()->process;
+/home/jisookim/myos/src/keyboard/keyboard.c:55:    int next_head = (process->keyboard.head + 1) % KEYBOARD_BUFFER_SIZE;
+/home/jisookim/myos/src/keyboard/keyboard.c:58:    if (next_head != process->keyboard.tail)
+/home/jisookim/myos/src/keyboard/keyboard.c:60:        process->keyboard.key_buffer[process->keyboard.head] = c; // 현재 head 위치에 저장
+/home/jisookim/myos/src/keyboard/keyboard.c:61:        process->keyboard.head = next_head; // head 한 칸 전진
+/home/jisookim/myos/src/keyboard/keyboard.c:63:    task_wakeup((void*)&process->keyboard);
+/home/jisookim/myos/src/keyboard/keyboard.c:73:    struct process* process = get_cur_task()->process;
+/home/jisookim/myos/src/keyboard/keyboard.c:74:    if (process->keyboard.head == process->keyboard.tail)
+/home/jisookim/myos/src/keyboard/keyboard.c:79:    char c = process->keyboard.key_buffer[process->keyboard.tail];
+/home/jisookim/myos/src/keyboard/keyboard.c:80:    process->keyboard.tail = (process->keyboard.tail + 1) % KEYBOARD_BUFFER_SIZE;
+/home/jisookim/myos/src/boot/boot.asm:4:CODE_SEG equ gdt_code - gdt_start
+/home/jisookim/myos/src/boot/boot.asm:5:DATA_SEG equ gdt_data - gdt_start
+/home/jisookim/myos/src/boot/boot.asm:65:    dw 0xFFFF       ; Limit of Low Bits 0 - 15  //2bytes
+/home/jisookim/myos/src/boot/boot.asm:66:    dw 0            ; Base of Low Bits 0 - 15   //2bytes
+/home/jisookim/myos/src/boot/boot.asm:67:    db 0            ; Base of Middle Bits 16 - 23
+/home/jisookim/myos/src/boot/boot.asm:70:    db 0            ; Base of High Bits 24 - 31
+/home/jisookim/myos/src/boot/boot.asm:74:    dw 0xFFFF              ; Limit of Low Bits 0 - 15
+/home/jisookim/myos/src/boot/boot.asm:75:    dw 0             ; Base of Low Bits 0 - 15
+/home/jisookim/myos/src/boot/boot.asm:76:    db 0            ; Base of Middle Bits 16 - 23
+/home/jisookim/myos/src/boot/boot.asm:79:    db 0            ; Base of High Bits 24 - 31
+/home/jisookim/myos/src/boot/boot.asm:84:    dw gdt_end - gdt_start - 1 ; Size of GDT
+/home/jisookim/myos/src/boot/boot.asm:114:    out dx, al ;send bits 0-7
+/home/jisookim/myos/src/boot/boot.asm:115:    ;finished sending bits 0-7 of lba
+/home/jisookim/myos/src/boot/boot.asm:155:times 510-($ -$$) db 0      ; fill remaining bytes with 0 up to 510
+/home/jisookim/myos/src/idt/idt.asm:73:    popad   ;pop all general purpose registers - double
+/home/jisookim/myos/src/idt/idt.asm:97:INTERRUPT_ERROR_CODE    12  ; stack-segment fault
+/home/jisookim/myos/src/idt/idt.c:30:    return -1;
+/home/jisookim/myos/src/idt/idt.c:61:    print_hex(frame->error_code);
+/home/jisookim/myos/src/idt/idt.c:73:  int res = paging_map(proc->task->page_directory, (void*)aligned_addr, page, PAGING_WRITEABLE | PAGING_PRESENT | PAGING_USER_ACCESS);
+/home/jisookim/myos/src/idt/idt.c:83:  idt->bottom_offset = (uint32_t)address & 0x0000FFFF;  // 하위 16비트
+/home/jisookim/myos/src/idt/idt.c:84:  idt->selector = MYOS_KERNEL_CODE_SELECTOR;
+/home/jisookim/myos/src/idt/idt.c:85:  idt->zero = 0;
+/home/jisookim/myos/src/idt/idt.c:86:  idt->type_attr = 0xEE; // 11101110b : present, ring 0, 32-bit interrupt gate
+/home/jisookim/myos/src/idt/idt.c:87:  idt->top_offset = (uint32_t)address >> 16;            // 상위 16비트
+/home/jisookim/myos/src/idt/idt.c:94:  idtr_descriptor.limit = sizeof(idt_desc) - 1;
+/home/jisookim/myos/src/idt/idt.c:156:  int ask = frame->eax; // System call command is in EAX
+/home/jisookim/myos/src/idt/idt.c:161:  frame->eax = (uint32_t)(uintptr_t)res;
+/home/jisookim/myos/src/idt/idt.c:166:    paging_switch(t->page_directory);
+/home/jisookim/myos/src/idt/idt.c:176:  int interrupt = frame->vector_number;
+/home/jisookim/myos/src/isr80h/user_heap.c:9:  if (!t || !t->process)
+/home/jisookim/myos/src/isr80h/user_heap.c:11:    return (void*)-1;
+/home/jisookim/myos/src/isr80h/user_heap.c:15:  return process_sbrk(t->process, amounts);
+/home/jisookim/myos/src/isr80h/process.c:42:    // however, proc->id would be valid.
+/home/jisookim/myos/src/isr80h/process.c:45:        return (void*)(int)proc->id;
+/home/jisookim/myos/src/isr80h/io.c:39:    task_block(&t->process->keyboard);
+/home/jisookim/myos/src/isr80h/io.c:131:// user -> kernel -> disk
+/home/jisookim/myos/src/isr80h/io.c:165:    return (void *)(uintptr_t)-1;
+/home/jisookim/myos/src/isr80h/io.c:186:    return (void *)(uintptr_t)-1;
+/home/jisookim/myos/src/isr80h/io.c:193:    return (void *)(uintptr_t)-1;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:13:    struct fat_item* item = file_descriptor->item;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:15:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:17:    struct fat_private* private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:18:    struct disk_streamer* stream = private->directory_stream;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:20:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:23:    unsigned int pos = item->item_entry_sector * disk->sector_size + item->item_entry_offset;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:29:    res = disk_stream_write(stream, item->dir_item, sizeof(struct fat_directory_item));
+/home/jisookim/myos/src/filesystem/fat16_directory.c:40:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:44:    int directory_start_pos = root_dir_sector_pos * disk->sector_size;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:45:    struct disk_streamer* stream = fat_private->directory_stream;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:48:        res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:56:            res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:81:    disk->sector_size = 512bytes
+/home/jisookim/myos/src/filesystem/fat16_directory.c:87:    struct fat_header* primary_header = &fat_private->header.primary_header;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:88:    int root_dir_sector_pos = (primary_header->number_of_fats * primary_header->sectors_per_fat) + primary_header->reserved_sectors;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:89:    int root_dir_entires = fat_private->header.primary_header.root_dir_entries;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:91:    int total_sectors = root_dir_size / disk->sector_size;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:93:    if ((root_dir_size % disk->sector_size) > 0)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:102:        res = -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:106:    struct disk_streamer* stream = fat_private->directory_stream;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:109:        res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:115:        res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:119:    out_directory->item = dir;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:120:    out_directory->total = total_items;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:121:    out_directory->sector_pos = root_dir_sector_pos;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:122:    out_directory->ending_sector_pos = root_dir_sector_pos + total_sectors;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:132:        return ERROR(-MYOS_ERROR_NO_MEMORY);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:134:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:137:    if (!(&fat_private->root_directory))
+/home/jisookim/myos/src/filesystem/fat16_directory.c:141:    struct fat_item* root_item = fat16_find_item_in_dir(disk, &fat_private->root_directory, path->part);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:146:    struct path_part* next_part = path->next;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:150:        if (cur_item->type != FAT_ITEM_TYPE_DIRECTORY)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:155:        struct fat_item* next_item = fat16_find_item_in_dir(disk, cur_item->directory, next_part->part);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:158:        next_part = next_part->next;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:170:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:171:    int max_entries = fat_private->header.primary_header.root_dir_entries;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:175:        if (directory->item[i].filename[0] == 0x00)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:180:        if (directory->item[i].attribute == 0x0F)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:186:        if (directory->item[i].filename[0] == 0xE5)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:192:        format_83_to_string(&directory->item[i], tempfile, sizeof(tempfile));
+/home/jisookim/myos/src/filesystem/fat16_directory.c:196:            item = fat16_new_item_from_directory_item(disk, &directory->item[i]);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:197:            item->item_entry_sector = directory->sector_pos + (i * sizeof(struct fat_directory_item)) / disk->sector_size;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:198:            item->item_entry_offset = (i * sizeof(struct fat_directory_item)) % disk->sector_size;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:213:    if (directory_item->attribute & FAT_FILE_SUBDIRECTORY)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:215:        f_item->type = FAT_ITEM_TYPE_DIRECTORY;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:216:        f_item->directory = fat16_load_for_sub_directory(disk, directory_item);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:220:        f_item->type = FAT_ITEM_TYPE_FILE;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:221:        f_item->dir_item = fat16_clone_dir_item(directory_item, sizeof(struct fat_directory_item));
+/home/jisookim/myos/src/filesystem/fat16_directory.c:241:    for (i = 0; i < 8 && item->filename[i] != ' ' && j < max - 1; i++)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:243:        out[j++] = item->filename[i];
+/home/jisookim/myos/src/filesystem/fat16_directory.c:245:    if (item->ext[0] != ' ')
+/home/jisookim/myos/src/filesystem/fat16_directory.c:247:        if (j < max - 1)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:251:        for (i = 0; i < 3 && item->ext[i] != ' ' && j < max - 1; i++)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:253:            out[j++] = item->ext[i];
+/home/jisookim/myos/src/filesystem/fat16_directory.c:263:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:264:    if (!(item->attribute & FAT_FILE_SUBDIRECTORY))
+/home/jisookim/myos/src/filesystem/fat16_directory.c:266:        return ERROR(-MYOS_ERROR_NO_MEMORY);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:272:        res = -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:279:    dir->item = kernel_zero_alloc(dir_size);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:280:    if (!dir->item)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:282:        res = -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:285:    res = fat16_read_internal(disk, cluster, 0x00, dir_size, dir->item);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:294:        if (dir->item[i].filename[0] == 0x00)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:298:        if (dir->item[i].filename[0] != 0xE5)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:303:    dir->total = valid_items;
+/home/jisookim/myos/src/filesystem/fat16_directory.c:322:    if (directory->item)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:324:        kernel_free(directory->item);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:332:    if (item->type == FAT_ITEM_TYPE_DIRECTORY)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:334:        fat16_free_dir(item->directory);
+/home/jisookim/myos/src/filesystem/fat16_directory.c:336:    else if(item->type == FAT_ITEM_TYPE_FILE)
+/home/jisookim/myos/src/filesystem/fat16_directory.c:338:        kernel_free(item->dir_item);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:33:    return item->low_16_bits_first_cluster | (item->high_16_bits_first_cluster << 16);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:38:    return disk->sector_size * private->header.primary_header.sectors_per_cluster;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:43:    return private->root_directory.ending_sector_pos + ((cluster - 2) * private->header.primary_header.sectors_per_cluster);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:48:    return root_dir_sector_pos * (disk->sector_size);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:53:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:54:    struct disk_streamer* stream = fat_private->fat_read_stream; 
+/home/jisookim/myos/src/filesystem/fat16_helper.c:56:    uint32_t fat_start_sector = fat_private->header.primary_header.reserved_sectors;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:57:    uint32_t fat_entry_pos = fat_start_sector * disk->sector_size + (cur_cluster * 2);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:73:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:74:    struct disk_streamer* stream = fat_private->fat_read_stream; 
+/home/jisookim/myos/src/filesystem/fat16_helper.c:76:    int fat_start_sector = fat_private->header.primary_header.reserved_sectors;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:77:    int fat_entry_pos = fat_start_sector * disk->sector_size + (cluster * 2);
+/home/jisookim/myos/src/filesystem/fat16_helper.c:80:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:84:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:104:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:105:    int sectors_per_fat = fat_private->header.primary_header.sectors_per_fat;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:106:    int total_clusters = (sectors_per_fat * disk->sector_size) / 2;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:115:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:127:        if (c >= 'a' && c <= 'z') c -= 32;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:136:            if (c >= 'a' && c <= 'z') c -= 32;
+/home/jisookim/myos/src/filesystem/fat16_helper.c:155:            res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:11:    struct fat_private *f_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:12:    struct disk_streamer* streamer = f_private->directory_stream;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:13:    struct fat_directory *root = &f_private->root_directory;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:14:    int max_entries = f_private->header.primary_header.root_dir_entries;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:17:        if (root->item[i].filename[0] == 0x00 || root->item[i].filename[0] == 0xE5)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:19:            ft_memset(&root->item[i], 0, sizeof(struct fat_directory_item));
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:20:            fat16_to_dos_filename(path->part, root->item[i].filename, root->item[i].ext);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:21:            root->item[i].attribute = 0x00;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:24:            int root_dir_sector = f_private->header.primary_header.reserved_sectors + (f_private->header.primary_header.number_of_fats * f_private->header.primary_header.sectors_per_fat);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:25:            int entry_pos = (root_dir_sector * disk->sector_size) + (i * sizeof(struct fat_directory_item));
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:28:            if(disk_stream_write(streamer, &root->item[i], sizeof(struct fat_directory_item)) < 0)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:30:                return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:35:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:41:    struct fat_item* desc_item = desc->item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:43:    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:44:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:46:    int32_t new_pos = (int32_t)desc->pos;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:54:            new_pos = (int32_t)desc_item->dir_item->filesize + offset; // Relative to the end of the file
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:60:            return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:63:    if (new_pos < 0 || new_pos > (int32_t)desc_item->dir_item->filesize)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:65:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:68:    desc->pos = (uint32_t)new_pos;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:69:    return desc->pos;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:75:    struct fat_item* desc_item = desc->item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:77:    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:79:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:82:    stat->size = desc_item->dir_item->filesize;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:83:    stat->mode = 0x00;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:85:    if (desc_item->dir_item->attribute & FAT_FILE_READ_ONLY)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:87:        stat->mode |= FILE_STAT_READ_ONLY;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:89:    if (desc_item->dir_item->attribute & FAT_FILE_SUBDIRECTORY)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:91:        stat->mode |= FILE_STAT_DIRECTORY;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:93:    // if (desc_item->dir_item->attribute & FAT_FILE_HIDDEN)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:95:    //     stat->mode |= FILE_STAT_HIDDEN;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:97:    // if (desc_item->dir_item->attribute & FAT_FILE_SYSTEM)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:99:    //     stat->mode |= FILE_STAT_SYSTEM;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:101:    // if (desc_item->dir_item->attribute & FAT_FILE_VOLUME_LABEL)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:103:    //     stat->mode |= FILE_STAT_VOLUME_LABEL;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:105:    // if (desc_item->dir_item->attribute & FAT_FILE_ARCHIVED)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:107:    //     stat->mode |= FILE_STAT_ARCHIVE;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:115:    struct fat_item* desc_item = desc->item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:117:    if (!desc || !desc_item || desc_item->type != FAT_ITEM_TYPE_FILE)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:118:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:131:        return ERROR(-MYOS_ERROR_NO_MEMORY);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:133:    desc->item = fat16_get_dir_entry(disk, path);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:134:    if (desc->item == NULL)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:144:            desc->item = fat16_get_dir_entry(disk, path);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:147:    if (desc->item == NULL)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:150:        return ERROR(-MYOS_FILE_NOT_FOUND);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:152:    desc->pos = 0;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:156:        struct fat_directory_item *item = desc->item->dir_item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:161:            item->low_16_bits_first_cluster = 0;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:162:            item->high_16_bits_first_cluster = 0;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:163:            item->filesize = 0;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:173:    struct fat_private *f_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:174:    struct disk_streamer *streamer = f_private->cluster_read_stream;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:185:            return -MYOS_EOF;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:196:        uint32_t cluster_absolute_pos = starting_sector * disk->sector_size + offset_int_cluster;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:202:        if (bytes_to_write > cluster_size - offset_int_cluster)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:204:            bytes_to_write = cluster_size - offset_int_cluster;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:212:        total_bytes -= bytes_to_write;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:242:    struct fat_directory_item* item = descriptor->item->dir_item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:244:    int offset = descriptor->pos;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:248:    int cluster = item->low_16_bits_first_cluster | (item->high_16_bits_first_cluster << 16);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:256:            return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:259:        // 1-1. FAT 테이블에 할당 표시 (EOF)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:262:        // 1-2. 디렉토리 엔트리에 첫 클러스터 정보 업데이트
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:263:        item->low_16_bits_first_cluster = (uint16_t)(free_cluster & 0xFFFF);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:264:        item->high_16_bits_first_cluster = (uint16_t)((free_cluster >> 16) & 0xFFFF);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:266:        // 1-3. 디렉토리 엔트리를 디스크에 저장 (중요!)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:268:        fat16_update_directory_entry(disk, descriptor, item->filesize);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:275:        descriptor->pos += res;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:276:        if (descriptor->pos > item->filesize)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:278:            item->filesize = descriptor->pos;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:279:            fat16_update_directory_entry(disk, descriptor, item->filesize);
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:291:    struct fat_private* fat_private = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:292:    struct disk_streamer* streamer = fat_private->cluster_read_stream;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:314:        uint32_t cluster_absolute_pos = (uint32_t)starting_sector * disk->sector_size + offset;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:315:        // 2-2. 스트리머 위치 설정 (Seek)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:317:        int remaining_in_cluster = cluster_size - offset;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:330:        size -= res;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:359:  if (!ffd || !ffd->item)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:360:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:362:  struct fat_directory_item *item = ffd->item->dir_item;
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:366:  if (offset >= item->filesize)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:369:  if (offset + total_bytes > item->filesize)
+/home/jisookim/myos/src/filesystem/fat16_file_ops.c:370:    total_bytes = item->filesize - offset;
+/home/jisookim/myos/src/filesystem/pathparser.c:10:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/pathparser.c:13:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/pathparser.c:16:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/pathparser.c:19:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/pathparser.c:21:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/pathparser.c:32:        return -MYOS_BAD_PATH;
+/home/jisookim/myos/src/filesystem/pathparser.c:48:    root->drive_number = drive_num;
+/home/jisookim/myos/src/filesystem/pathparser.c:49:    root->first = NULL;
+/home/jisookim/myos/src/filesystem/pathparser.c:57:    // while (**path != '/' && **path != '\0' && i < MYOS_MAX_PATH_LENGTH - 1)
+/home/jisookim/myos/src/filesystem/pathparser.c:117:    new_part->part =  (char*)path_part_str;
+/home/jisookim/myos/src/filesystem/pathparser.c:118:    new_part->next = NULL;
+/home/jisookim/myos/src/filesystem/pathparser.c:122:        last->next = new_part;
+/home/jisookim/myos/src/filesystem/pathparser.c:130:    path_part_t *current = root->first;
+/home/jisookim/myos/src/filesystem/pathparser.c:133:        path_part_t *next = current->next;
+/home/jisookim/myos/src/filesystem/pathparser.c:134:        kernel_free(current->part);
+/home/jisookim/myos/src/filesystem/pathparser.c:172:    root->first = first;
+/home/jisookim/myos/src/filesystem/fat16.c:32:    fat_private->cluster_read_stream = create_disk_streamer(disk->id);
+/home/jisookim/myos/src/filesystem/fat16.c:33:    fat_private->fat_read_stream = create_disk_streamer(disk->id);
+/home/jisookim/myos/src/filesystem/fat16.c:34:    fat_private->directory_stream = create_disk_streamer(disk->id);
+/home/jisookim/myos/src/filesystem/fat16.c:43:    disk->fs_private_data = fat_private;
+/home/jisookim/myos/src/filesystem/fat16.c:44:    struct disk_streamer* stream = create_disk_streamer(disk->id);
+/home/jisookim/myos/src/filesystem/fat16.c:45:    if (disk_stream_read(stream, &fat_private->header, sizeof(struct fat_h)) < 0)
+/home/jisookim/myos/src/filesystem/fat16.c:47:        res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16.c:52:    if (fat_private->header.shared.extended_header.signature != 0x29)
+/home/jisookim/myos/src/filesystem/fat16.c:54:        res = -MYOS_ERROR_FILESYSTEM_NOT_SUPPORTED;
+/home/jisookim/myos/src/filesystem/fat16.c:58:    if (fat16_get_root_directory(disk, fat_private, &fat_private->root_directory) < 0)
+/home/jisookim/myos/src/filesystem/fat16.c:60:        res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/fat16.c:63:    disk->filesystem = &fat16_filesystem;
+/home/jisookim/myos/src/filesystem/fat16.c:76:    if (!disk || !disk->fs_private_data)
+/home/jisookim/myos/src/filesystem/fat16.c:77:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/fat16.c:78:    struct fat_private *priv = disk->fs_private_data;
+/home/jisookim/myos/src/filesystem/fat16.c:80:    if (priv->cluster_read_stream)
+/home/jisookim/myos/src/filesystem/fat16.c:81:        destroy_disk_streamer(priv->cluster_read_stream);
+/home/jisookim/myos/src/filesystem/fat16.c:82:    if (priv->fat_read_stream)
+/home/jisookim/myos/src/filesystem/fat16.c:83:        destroy_disk_streamer(priv->fat_read_stream);
+/home/jisookim/myos/src/filesystem/fat16.c:84:    if (priv->directory_stream)
+/home/jisookim/myos/src/filesystem/fat16.c:85:        destroy_disk_streamer(priv->directory_stream);
+/home/jisookim/myos/src/filesystem/fat16.c:87:    if (priv->root_directory.item)
+/home/jisookim/myos/src/filesystem/fat16.c:88:        kernel_free(priv->root_directory.item);
+/home/jisookim/myos/src/filesystem/fat16.c:91:    disk->fs_private_data = NULL;
+/home/jisookim/myos/src/filesystem/file.c:63:  int res = -MYOS_NO_FREE_FILE_DESCRIPTOR;
+/home/jisookim/myos/src/filesystem/file.c:71:      fd->index = i + 1;
+/home/jisookim/myos/src/filesystem/file.c:90:  int i = fd - 1;
+/home/jisookim/myos/src/filesystem/file.c:102:    if (filesystems[i] != NULL && filesystems[i]->resolve(disk) == 0)
+/home/jisookim/myos/src/filesystem/file.c:113:  return disk->filesystem->unresolve(disk);
+/home/jisookim/myos/src/filesystem/file.c:148:    res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:153:  if (!root_path->first)
+/home/jisookim/myos/src/filesystem/file.c:155:    res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:158:  struct disk *d = get_disk(root_path->drive_number);
+/home/jisookim/myos/src/filesystem/file.c:161:    res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/file.c:164:  if (!d->filesystem)
+/home/jisookim/myos/src/filesystem/file.c:166:    res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/file.c:173:    res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/file.c:177:  void *fd_private_data = d->filesystem->open(d, root_path->first, filemode);
+/home/jisookim/myos/src/filesystem/file.c:193:  desc->filesystem = d->filesystem;
+/home/jisookim/myos/src/filesystem/file.c:194:  desc->private = fd_private_data;
+/home/jisookim/myos/src/filesystem/file.c:195:  desc->disk = d;
+/home/jisookim/myos/src/filesystem/file.c:196:  desc->pos = 0;
+/home/jisookim/myos/src/filesystem/file.c:197:  res = desc->index;
+/home/jisookim/myos/src/filesystem/file.c:214:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:222:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:225:  int bytes = desc->filesystem->read(desc->disk, desc->pos, desc->private, size, nmemb, buffer);
+/home/jisookim/myos/src/filesystem/file.c:228:    desc->pos += bytes;
+/home/jisookim/myos/src/filesystem/file.c:241:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:249:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:252:  res = desc->filesystem->write(desc->disk, desc->private, size, nmemb, (char *)ptr);
+/home/jisookim/myos/src/filesystem/file.c:259:  desc->pos += res;
+/home/jisookim/myos/src/filesystem/file.c:271:    res = -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:275:  res = desc->filesystem->seek(desc->private, offset, mode);
+/home/jisookim/myos/src/filesystem/file.c:278:    desc->pos = res;
+/home/jisookim/myos/src/filesystem/file.c:294:    res = -MYOS_IO_ERROR;
+/home/jisookim/myos/src/filesystem/file.c:298:  res = desc->filesystem->stat(desc->private, stat);
+/home/jisookim/myos/src/filesystem/file.c:315:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/filesystem/file.c:317:  res = desc->filesystem->close(desc->private);
+/home/jisookim/myos/src/filesystem/file.c:318:  if (file_descriptors[fd - 1] == desc)
+/home/jisookim/myos/src/filesystem/file.c:320:    file_descriptors[fd - 1] = 0;
+/home/jisookim/myos/src/task/elf.c:5:    return (void*) elf_header->e_entry;
+/home/jisookim/myos/src/task/elf.c:10:    return elf_header->e_entry;
+/home/jisookim/myos/src/task/task.asm:20:    mov ax, [ebx+32] ; task->regs.cs
+/home/jisookim/myos/src/task/task.c:25:  task->page_directory =
+/home/jisookim/myos/src/task/task.c:27:  if (!task->page_directory)
+/home/jisookim/myos/src/task/task.c:29:    return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/task.c:33:  task->kstack = kernel_malloc(4096);
+/home/jisookim/myos/src/task/task.c:34:  if (!task->kstack)
+/home/jisookim/myos/src/task/task.c:36:      paging_free_4gb(task->page_directory);
+/home/jisookim/myos/src/task/task.c:37:      return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/task.c:40:  task->priority = TASK_PRIORITY_MEDIUM;
+/home/jisookim/myos/src/task/task.c:41:  task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
+/home/jisookim/myos/src/task/task.c:42:  task->regs.ss = MYOS_USER_DATA_SEGMENT;
+/home/jisookim/myos/src/task/task.c:43:  task->regs.cs = MYOS_USER_CODE_SEGMENT;
+/home/jisookim/myos/src/task/task.c:44:  task->regs.esp = MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_START;
+/home/jisookim/myos/src/task/task.c:45:  task->regs.flags = 0x202;
+/home/jisookim/myos/src/task/task.c:46:  task->process = proc;
+/home/jisookim/myos/src/task/task.c:47:  task->state = TASK_RUNNING;
+/home/jisookim/myos/src/task/task.c:53:  t->next = task_head;
+/home/jisookim/myos/src/task/task.c:54:  t->prev = NULL;
+/home/jisookim/myos/src/task/task.c:56:    task_head->prev = t;
+/home/jisookim/myos/src/task/task.c:64:  t->next = NULL;
+/home/jisookim/myos/src/task/task.c:65:  t->prev = task_tail;
+/home/jisookim/myos/src/task/task.c:67:    task_tail->next = t;
+/home/jisookim/myos/src/task/task.c:105:  struct task *t = task_cur->next;
+/home/jisookim/myos/src/task/task.c:112:      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_HIGH)
+/home/jisookim/myos/src/task/task.c:116:      t = t->next;
+/home/jisookim/myos/src/task/task.c:125:      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_MEDIUM)
+/home/jisookim/myos/src/task/task.c:129:      t = t->next;
+/home/jisookim/myos/src/task/task.c:138:      if (t->state == TASK_RUNNING && t->priority == TASK_PRIORITY_LOW)
+/home/jisookim/myos/src/task/task.c:142:      t = t->next;
+/home/jisookim/myos/src/task/task.c:152:  task_cur->state = TASK_BLOCKED;
+/home/jisookim/myos/src/task/task.c:153:  task_cur->event_wait_channel = event_wait_channel;
+/home/jisookim/myos/src/task/task.c:158:  while (task_cur->state == TASK_BLOCKED)
+/home/jisookim/myos/src/task/task.c:167:  task_cur->sleep_expiry = get_tick() + wait_ticks;
+/home/jisookim/myos/src/task/task.c:168:  task_cur->state = TASK_BLOCKED;
+/home/jisookim/myos/src/task/task.c:173:  while (task_cur->state == TASK_BLOCKED)
+/home/jisookim/myos/src/task/task.c:182:  if (task->prev)
+/home/jisookim/myos/src/task/task.c:183:    task->prev->next = task->next;
+/home/jisookim/myos/src/task/task.c:185:    task_head = task->next;
+/home/jisookim/myos/src/task/task.c:187:  if (task->next)
+/home/jisookim/myos/src/task/task.c:188:    task->next->prev = task->prev;
+/home/jisookim/myos/src/task/task.c:190:    task_tail = task->prev;
+/home/jisookim/myos/src/task/task.c:193:    task_cur = task->next;
+/home/jisookim/myos/src/task/task.c:194:  paging_free_4gb(task->page_directory);
+/home/jisookim/myos/src/task/task.c:203:  paging_switch(task->page_directory);
+/home/jisookim/myos/src/task/task.c:204:  set_cur_process(task->process);
+/home/jisookim/myos/src/task/task.c:207:  if (task->kstack)
+/home/jisookim/myos/src/task/task.c:209:      tss.esp0 = (uint32_t)task->kstack + 4096;
+/home/jisookim/myos/src/task/task.c:213:  last_context_switch_cycles = (uint32_t)(end_tsc - start_tsc);
+/home/jisookim/myos/src/task/task.c:228:  paging_switch(task->page_directory);
+/home/jisookim/myos/src/task/task.c:249:  uint32_t virtual_addr = task->regs.esp + (index * sizeof(uint32_t));
+/home/jisookim/myos/src/task/task.c:262:  uint32_t entry = paging_get(task->page_directory->directory_entry, (void *)aligned_virtual_addr);
+/home/jisookim/myos/src/task/task.c:285:  task_return(&task_head->regs);
+/home/jisookim/myos/src/task/task.c:298:  task->regs.ip = frame->ip;
+/home/jisookim/myos/src/task/task.c:299:  task->regs.cs = frame->cs;
+/home/jisookim/myos/src/task/task.c:300:  task->regs.flags = frame->flags;
+/home/jisookim/myos/src/task/task.c:305:  그래서 frame->ss를 가져다 쓰면 됩니다.
+/home/jisookim/myos/src/task/task.c:308:  task->regs.ss = 0x10: 커널의 스택 세그먼트는 항상 고정된 0x10 (Kernel Data Selector)임을 우리가 알고 있으니 상수를 넣어주는 것입니다.
+/home/jisookim/myos/src/task/task.c:310:  if ((frame->cs & 0x03) == 0x03)
+/home/jisookim/myos/src/task/task.c:312:      task->regs.esp = frame->esp;
+/home/jisookim/myos/src/task/task.c:313:      task->regs.ss = frame->ss;
+/home/jisookim/myos/src/task/task.c:319:      task->regs.esp = (uint32_t)(uintptr_t)&frame->esp;
+/home/jisookim/myos/src/task/task.c:320:      task->regs.ss = MYOS_KERNEL_DATA_SELECTOR;
+/home/jisookim/myos/src/task/task.c:323:  task->regs.eax = frame->eax;
+/home/jisookim/myos/src/task/task.c:324:  task->regs.ebp = frame->ebp;
+/home/jisookim/myos/src/task/task.c:325:  task->regs.ebx = frame->ebx;
+/home/jisookim/myos/src/task/task.c:326:  task->regs.ecx = frame->ecx;
+/home/jisookim/myos/src/task/task.c:327:  task->regs.edi = frame->edi;
+/home/jisookim/myos/src/task/task.c:328:  task->regs.edx = frame->edx;
+/home/jisookim/myos/src/task/task.c:329:  task->regs.esi = frame->esi;
+/home/jisookim/myos/src/task/task.c:333:// kernel it means, we need to pass the string from user space ---> kernel space
+/home/jisookim/myos/src/task/task.c:337:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:342:      return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:345:  paging_switch(task->page_directory);
+/home/jisookim/myos/src/task/task.c:347:  ((char*)phys)[max-1] = '\0';
+/home/jisookim/myos/src/task/task.c:353://kernel -> user
+/home/jisookim/myos/src/task/task.c:357:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:362:      return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:365:  paging_switch(task->page_directory);
+/home/jisookim/myos/src/task/task.c:375:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:380:      return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/task.c:383:  paging_switch(task->page_directory);
+/home/jisookim/myos/src/task/task.c:397:    if (t->state == TASK_BLOCKED &&
+/home/jisookim/myos/src/task/task.c:398:        t->event_wait_channel == event_wait_channel)
+/home/jisookim/myos/src/task/task.c:400:      t->state = TASK_RUNNING;
+/home/jisookim/myos/src/task/task.c:401:      t->event_wait_channel = NULL;
+/home/jisookim/myos/src/task/task.c:403:    t = t->next;
+/home/jisookim/myos/src/task/task.c:417:    if (task->state == TASK_BLOCKED &&
+/home/jisookim/myos/src/task/task.c:418:        task->sleep_expiry > 0 &&
+/home/jisookim/myos/src/task/task.c:419:        cur_tick >= task->sleep_expiry)
+/home/jisookim/myos/src/task/task.c:421:      task->state = TASK_RUNNING;
+/home/jisookim/myos/src/task/task.c:422:      task->sleep_expiry = 0;
+/home/jisookim/myos/src/task/task.c:424:    task = task->next;
+/home/jisookim/myos/src/task/elfloader.c:11: * 1. 파일을 열고 파일 전체를 elf_file->elf_memory (커널 버퍼)에 읽어옴
+/home/jisookim/myos/src/task/elfloader.c:21:// 1단계: 파일을 열어 전체 데이터를 elf_file->elf_memory (커널 버퍼)에 읽어옴
+/home/jisookim/myos/src/task/elfloader.c:28:    fd = fopen(elf_file->filename, "r");
+/home/jisookim/myos/src/task/elfloader.c:30:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/task/elfloader.c:36:    elf_file->elf_memory = kernel_zero_alloc(stat.size);
+/home/jisookim/myos/src/task/elfloader.c:37:    if (!elf_file->elf_memory)
+/home/jisookim/myos/src/task/elfloader.c:39:        res = -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/elfloader.c:43:    res = fread(fd, elf_file->elf_memory, stat.size, 1);
+/home/jisookim/myos/src/task/elfloader.c:61:    for (int i = 0; i < header->e_program_header_count; i++)
+/home/jisookim/myos/src/task/elfloader.c:64:        if (phdr->ep_type != PT_LOAD)
+/home/jisookim/myos/src/task/elfloader.c:67:        if (phdr->ep_vaddr < min_vaddr)
+/home/jisookim/myos/src/task/elfloader.c:68:            min_vaddr = phdr->ep_vaddr;
+/home/jisookim/myos/src/task/elfloader.c:69:        if (phdr->ep_vaddr + phdr->ep_memsize > max_vaddr)
+/home/jisookim/myos/src/task/elfloader.c:70:            max_vaddr = phdr->ep_vaddr + phdr->ep_memsize;
+/home/jisookim/myos/src/task/elfloader.c:74:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/elfloader.c:77:    elf_file->virtual_base_address = (void *)min_vaddr;
+/home/jisookim/myos/src/task/elfloader.c:78:    elf_file->virtual_end_address = (void *)max_vaddr;
+/home/jisookim/myos/src/task/elfloader.c:79:    elf_file->in_memory_size = max_vaddr - min_vaddr;
+/home/jisookim/myos/src/task/elfloader.c:88:    elf_file->physical_base_address = kernel_zero_alloc(elf_file->in_memory_size);
+/home/jisookim/myos/src/task/elfloader.c:89:    if (!elf_file->physical_base_address)
+/home/jisookim/myos/src/task/elfloader.c:91:        res = -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/elfloader.c:106:    for (int i = 0; i < header->e_program_header_count; i++)
+/home/jisookim/myos/src/task/elfloader.c:109:        if (phdr->ep_type != PT_LOAD)
+/home/jisookim/myos/src/task/elfloader.c:112:        void* dest = (void*)((uint32_t)elf_file->physical_base_address + (phdr->ep_vaddr - (uint32_t)elf_file->virtual_base_address));
+/home/jisookim/myos/src/task/elfloader.c:113:        void* src = (void*)((uint32_t)elf_file->elf_memory + phdr->ep_offset);
+/home/jisookim/myos/src/task/elfloader.c:114:        ft_memcpy(dest, src, phdr->ep_filesize);
+/home/jisookim/myos/src/task/process.c:14:  process->parent_id = -1; // No parent
+/home/jisookim/myos/src/task/process.c:15:  process->exit_code = 0;  // Default exit code
+/home/jisookim/myos/src/task/process.c:46:  return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/process.c:53:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/process.c:58:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/task/process.c:64:    return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/process.c:71:    return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/process.c:79:    return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/process.c:85:    proc->parent_id = get_cur_process()->id;
+/home/jisookim/myos/src/task/process.c:109:  if (proc->elf_entry_point)
+/home/jisookim/myos/src/task/process.c:111:    proc->task->regs.ip = (uint32_t)proc->elf_entry_point;
+/home/jisookim/myos/src/task/process.c:114:  ft_strlcpy(proc->filename, binary_name, sizeof(proc->filename));
+/home/jisookim/myos/src/task/process.c:115:  proc->id = pid;
+/home/jisookim/myos/src/task/process.c:116:  proc->task = t;
+/home/jisookim/myos/src/task/process.c:117:  proc->stack = stack_ptr;
+/home/jisookim/myos/src/task/process.c:120:  if (proc->virtual_end_address)
+/home/jisookim/myos/src/task/process.c:122:    proc->bin_end_addr = proc->virtual_end_address;
+/home/jisookim/myos/src/task/process.c:126:    void *base = proc->virtual_base_address ? proc->virtual_base_address : (void *)MYOS_PROGRAM_VIRTUAL_ADDRESS;
+/home/jisookim/myos/src/task/process.c:127:    proc->bin_end_addr = (void *)((uint32_t)base + proc->size);
+/home/jisookim/myos/src/task/process.c:129:  proc->cur_end_heap = paging_align_address(proc->bin_end_addr);
+/home/jisookim/myos/src/task/elfloader_helper.c:9:    return elf_header->e_magic[0] == ELFMAG0 &&
+/home/jisookim/myos/src/task/elfloader_helper.c:10:           elf_header->e_magic[1] == ELFMAG1 &&
+/home/jisookim/myos/src/task/elfloader_helper.c:11:           elf_header->e_magic[2] == ELFMAG2 &&
+/home/jisookim/myos/src/task/elfloader_helper.c:12:           elf_header->e_magic[3] == ELFMAG3;
+/home/jisookim/myos/src/task/elfloader_helper.c:18:    //return elf_header->e_magic[EI_CLASS] == ELFCLASSNONE ||
+/home/jisookim/myos/src/task/elfloader_helper.c:19:    return elf_header->e_magic[EI_CLASS] == ELFCLASS32;
+/home/jisookim/myos/src/task/elfloader_helper.c:27:    // return elf_header->e_magic[EI_DATA] == ELFDATANONE ||
+/home/jisookim/myos/src/task/elfloader_helper.c:28:    return elf_header->e_magic[EI_DATA] == ELFDATA2LSB;
+/home/jisookim/myos/src/task/elfloader_helper.c:33:    return elf_header->e_file_type == ET_EXEC &&
+/home/jisookim/myos/src/task/elfloader_helper.c:34:             elf_header->e_entry >= MYOS_PROGRAM_VIRTUAL_ADDRESS;
+/home/jisookim/myos/src/task/elfloader_helper.c:39:    return elf_header->e_program_header_offset > 0;
+/home/jisookim/myos/src/task/elfloader_helper.c:44:    return elf_file->elf_memory;
+/home/jisookim/myos/src/task/elfloader_helper.c:50:    return (struct elf_header*)elf_file->elf_memory;
+/home/jisookim/myos/src/task/elfloader_helper.c:55:    return (struct elf32_shdr*)((uint32_t)elf_header+elf_header->e_section_header_offset);
+/home/jisookim/myos/src/task/elfloader_helper.c:60:    if (elf_header->e_program_header_offset == 0)
+/home/jisookim/myos/src/task/elfloader_helper.c:63:    return (struct elf_program_header*)((uint32_t)elf_header + elf_header->e_program_header_offset);
+/home/jisookim/myos/src/task/elfloader_helper.c:83:    return (char*) elf_header + elf_section(elf_header, elf_header->e_section_header_string_table_index)->sh_offset;
+/home/jisookim/myos/src/task/elfloader_helper.c:88:    return elf_file->virtual_base_address;
+/home/jisookim/myos/src/task/elfloader_helper.c:93:    return elf_file->virtual_end_address;
+/home/jisookim/myos/src/task/elfloader_helper.c:98:    return elf_file->physical_base_address;
+/home/jisookim/myos/src/task/elfloader_helper.c:103:    return elf_file->physical_end_address;
+/home/jisookim/myos/src/task/elfloader_helper.c:108:    return (elfloader_validate_elf_magic(elf_header) && elf_valid_class(elf_header) && elf_valid_encoding(elf_header) && elf_has_program_header(elf_header)) && elf_is_executable(elf_header)? MYOS_ALL_OK : -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/elf.h:67:0-3	0-3	Magic number - 0x7F, then 'ELF' in ASCII
+/home/jisookim/myos/src/task/elf.h:71:7	7	OS ABI - usually 0 for System V
+/home/jisookim/myos/src/task/elf.h:72:8-15	8-15	Unused/padding
+/home/jisookim/myos/src/task/elf.h:73:16-17	16-17	Type (1 = relocatable, 2 = executable, 3 = shared, 4 = core)
+/home/jisookim/myos/src/task/elf.h:74:18-19	18-19	Instruction set - see table below
+/home/jisookim/myos/src/task/elf.h:75:20-23	20-23	ELF Version (currently 1)
+/home/jisookim/myos/src/task/elf.h:76:24-27	24-31	Program entry offset
+/home/jisookim/myos/src/task/elf.h:77:28-31	32-39	Program header table offset
+/home/jisookim/myos/src/task/elf.h:78:32-35	40-47	Section header table offset
+/home/jisookim/myos/src/task/elf.h:79:36-39	48-51	Flags - architecture dependent; see note below
+/home/jisookim/myos/src/task/elf.h:80:40-41	52-53	ELF Header size
+/home/jisookim/myos/src/task/elf.h:81:42-43	54-55	Size of an entry in the program header table
+/home/jisookim/myos/src/task/elf.h:82:44-45	56-57	Number of entries in the program header table
+/home/jisookim/myos/src/task/elf.h:83:46-47	58-59	Size of an entry in the section header table
+/home/jisookim/myos/src/task/elf.h:84:48-49	60-61	Number of entries in the section header table
+/home/jisookim/myos/src/task/elf.h:85:50-51	62-63	Section index to the section header string table
+/home/jisookim/myos/src/task/elf.h:89:  unsigned char e_magic[16];                    // 0-15 : magic number and basic info
+/home/jisookim/myos/src/task/elf.h:90:  uint16_t e_file_type;                         // 16-17 : file type
+/home/jisookim/myos/src/task/elf.h:91:  uint16_t e_machine;                           // 18-19 : machine type cpu architecture
+/home/jisookim/myos/src/task/elf.h:92:  uint32_t e_version;                           // 20-23 : elf version
+/home/jisookim/myos/src/task/elf.h:93:  uint32_t e_entry;                             // 24-27 : program starting point entry point
+/home/jisookim/myos/src/task/elf.h:94:  uint32_t e_program_header_offset;             // 28-31 : program header offset
+/home/jisookim/myos/src/task/elf.h:95:  uint32_t e_section_header_offset;             // 32-35 : section header offset
+/home/jisookim/myos/src/task/elf.h:96:  uint32_t e_flags;                             // 36-39 : flags
+/home/jisookim/myos/src/task/elf.h:97:  uint16_t e_elf_header_size;                   // 40-43 : elf header size
+/home/jisookim/myos/src/task/elf.h:98:  uint16_t e_program_header_size;               // 44-47 : program header size
+/home/jisookim/myos/src/task/elf.h:99:  uint16_t e_program_header_count;              // 48-51 : program header count
+/home/jisookim/myos/src/task/elf.h:100:  uint16_t e_section_header_size;               // 52-55 : section header size
+/home/jisookim/myos/src/task/elf.h:101:  uint16_t e_section_header_count;              // 56-59 : section header count
+/home/jisookim/myos/src/task/elf.h:102:  uint16_t e_section_header_string_table_index; // 60-63 : section header string
+/home/jisookim/myos/src/task/elf.h:108:0-3	Type of segment (see below)
+/home/jisookim/myos/src/task/elf.h:109:4-7	The offset in the file that the data for this segment can be found
+/home/jisookim/myos/src/task/elf.h:110:(p_offset) 8-11	Where you should start to put this segment in virtual memory
+/home/jisookim/myos/src/task/elf.h:111:(p_vaddr) 12-15	Reserved for segment's physical address (p_paddr) 16-19	Size of
+/home/jisookim/myos/src/task/elf.h:112:the segment in the file (p_filesz) 20-23	Size of the segment in memory
+/home/jisookim/myos/src/task/elf.h:113:(p_memsz, at least as big as p_filesz) 24-27	Flags (see below)  //
+/home/jisookim/myos/src/task/elf.h:114:Permissions  (read:4, write:2, execute:1) 28-31	The required alignment for this
+/home/jisookim/myos/src/task/elf.h:129:/* Standard ELF 32-bit Types */
+/home/jisookim/myos/src/task/elf.h:138:/* Standard ELF 32-bit Section Header */
+/home/jisookim/myos/src/task/elf.h:154:/* Standard ELF 32-bit Symbol Table Entry */
+/home/jisookim/myos/src/task/elf.h:166:/* Standard ELF 32-bit Dynamic Entry */
+/home/jisookim/myos/src/task/process_loader.c:16:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/task/process_loader.c:23:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/task/process_loader.c:30:    return -MYOS_ERROR_NO_MEMORY;
+/home/jisookim/myos/src/task/process_loader.c:37:    return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/task/process_loader.c:41:  proc->ptr = program_data_ptr;
+/home/jisookim/myos/src/task/process_loader.c:42:  proc->size = stat.size;
+/home/jisookim/myos/src/task/process_loader.c:53:    process->ptr = elf.physical_base_address;
+/home/jisookim/myos/src/task/process_loader.c:54:    process->size = elf.in_memory_size;
+/home/jisookim/myos/src/task/process_loader.c:55:    process->elf_entry_point = (void *)elf_get_header(&elf)->e_entry;
+/home/jisookim/myos/src/task/process_loader.c:56:    process->virtual_base_address = elf.virtual_base_address;
+/home/jisookim/myos/src/task/process_loader.c:57:    process->virtual_end_address = elf.virtual_end_address;
+/home/jisookim/myos/src/task/process_loader.c:70:  void *virtual_addr = proc->virtual_base_address
+/home/jisookim/myos/src/task/process_loader.c:71:                           ? proc->virtual_base_address
+/home/jisookim/myos/src/task/process_loader.c:73:  res = paging_map_to(proc->task->page_directory, virtual_addr, proc->ptr,
+/home/jisookim/myos/src/task/process_loader.c:74:                      paging_align_address(proc->ptr + proc->size),
+/home/jisookim/myos/src/task/process_loader.c:89:      process->task->page_directory,
+/home/jisookim/myos/src/task/process_loader.c:90:      (void *)MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_END, process->stack,
+/home/jisookim/myos/src/task/process_loader.c:91:      paging_align_address(process->stack + MYOS_USER_PROGRAM_STACK_SIZE),
+/home/jisookim/myos/src/task/process_loader.c:106:      if (in_arg && count - 1 == index)
+/home/jisookim/myos/src/task/process_loader.c:108:        int len = &command_line[i] - start;
+/home/jisookim/myos/src/task/process_loader.c:126:  if (in_arg && count - 1 == index)
+/home/jisookim/myos/src/task/process_loader.c:168:  for (int i = argc - 1; i >= 0; i--)
+/home/jisookim/myos/src/task/process_loader.c:177:    virtual_stack_ptr -= arg_len;
+/home/jisookim/myos/src/task/process_loader.c:178:    copy_to_task(process->task, arg, (void *)virtual_stack_ptr, arg_len);
+/home/jisookim/myos/src/task/process_loader.c:184:  virtual_stack_ptr -= (sizeof(uint32_t) * (argc + 1));
+/home/jisookim/myos/src/task/process_loader.c:189:    copy_to_task(process->task, &arg_vaddrs[i], (void *)argv_base + (i * 4), 4);
+/home/jisookim/myos/src/task/process_loader.c:193:  copy_to_task(process->task, &null_ptr, (void *)argv_base + (argc * 4), 4);
+/home/jisookim/myos/src/task/process_loader.c:195:  virtual_stack_ptr -= 4;
+/home/jisookim/myos/src/task/process_loader.c:196:  copy_to_task(process->task, &argv_base, (void *)virtual_stack_ptr, 4);
+/home/jisookim/myos/src/task/process_loader.c:197:  virtual_stack_ptr -= 4;
+/home/jisookim/myos/src/task/process_loader.c:198:  copy_to_task(process->task, &argc, (void *)virtual_stack_ptr, 4);
+/home/jisookim/myos/src/task/process_loader.c:201:  virtual_stack_ptr -= 4;
+/home/jisookim/myos/src/task/process_loader.c:203:  copy_to_task(process->task, &dummy_ret, (void *)virtual_stack_ptr, 4);
+/home/jisookim/myos/src/task/process_loader.c:205:  process->task->regs.esp = virtual_stack_ptr;
+/home/jisookim/myos/src/task/process_ops.c:10:    return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/process_ops.c:13:  p->exit_code = exit_code;
+/home/jisookim/myos/src/task/process_ops.c:16:    if (p->allocations[i])
+/home/jisookim/myos/src/task/process_ops.c:18:      kernel_free(p->allocations[i]);
+/home/jisookim/myos/src/task/process_ops.c:19:      p->allocations[i] = NULL;
+/home/jisookim/myos/src/task/process_ops.c:23:  p->task->state = TASK_ZOMBIE;
+/home/jisookim/myos/src/task/process_ops.c:24:  if (p->parent_id >= 0)
+/home/jisookim/myos/src/task/process_ops.c:26:    struct process *parent = get_process(p->parent_id);
+/home/jisookim/myos/src/task/process_ops.c:27:    if (parent && parent->task)
+/home/jisookim/myos/src/task/process_ops.c:37:    task_return(&next_task->regs);
+/home/jisookim/myos/src/task/process_ops.c:63:      if (proc->parent_id == current->id)
+/home/jisookim/myos/src/task/process_ops.c:66:        if (proc->task->state == TASK_ZOMBIE)
+/home/jisookim/myos/src/task/process_ops.c:70:            *status = proc->exit_code;
+/home/jisookim/myos/src/task/process_ops.c:72:          int pid = proc->id;
+/home/jisookim/myos/src/task/process_ops.c:74:          task_delete(proc->task);
+/home/jisookim/myos/src/task/process_ops.c:75:          kernel_free(proc->stack);
+/home/jisookim/myos/src/task/process_ops.c:86:      return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/task/process_ops.c:98:    return proc->cur_end_heap;
+/home/jisookim/myos/src/task/process_ops.c:101:  void *old_break = proc->cur_end_heap;
+/home/jisookim/myos/src/task/process_ops.c:106:    return (void *)-1;
+/home/jisookim/myos/src/task/process_ops.c:111:    uint32_t diff = (uint32_t)paging_align_address((void *)new_break) -
+/home/jisookim/myos/src/task/process_ops.c:120:          return (void *)-1;
+/home/jisookim/myos/src/task/process_ops.c:122:        paging_map_to(proc->task->page_directory, (void *)addr, phys,
+/home/jisookim/myos/src/task/process_ops.c:128:  proc->cur_end_heap = (void *)new_break;
+/home/jisookim/myos/src/programs/shell/Makefile:2:	mkdir -p ./build
+/home/jisookim/myos/src/programs/shell/Makefile:3:	nasm -f elf ../stdlib/start.asm -o ./build/start.o
+/home/jisookim/myos/src/programs/shell/Makefile:4:	nasm -f elf ../stdlib/stdlib.asm -o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/shell/Makefile:5:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ./shell.c -o ./build/shell.o
+/home/jisookim/myos/src/programs/shell/Makefile:6:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/stdlib.c -o ./build/stdlib.o
+/home/jisookim/myos/src/programs/shell/Makefile:7:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/malloc.c -o ./build/malloc.o
+/home/jisookim/myos/src/programs/shell/Makefile:8:	i686-elf-ld -g -T ./linker.ld -o ./shell.bin ./build/start.o ./build/shell.o ./build/stdlib.o ./build/malloc.o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/shell/Makefile:11:	rm -rf ./build/*
+/home/jisookim/myos/src/programs/shell/Makefile:12:	rm -rf ./shell.bin
+/home/jisookim/myos/src/programs/shell/shell.c:134:            idx--;
+/home/jisookim/myos/src/programs/shell/linker.ld:2:OUTPUT_FORMAT("elf32-i386")
+/home/jisookim/myos/src/programs/bf/bf.c:9:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:16:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:24:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:32:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:40:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:55:    return -1;
+/home/jisookim/myos/src/programs/bf/bf.c:69:      ptr--;
+/home/jisookim/myos/src/programs/bf/bf.c:74:    case '-':
+/home/jisookim/myos/src/programs/bf/bf.c:75:      tape[ptr]--;
+/home/jisookim/myos/src/programs/bf/bf.c:93:            loop--;
+/home/jisookim/myos/src/programs/bf/bf.c:103:          pc--;
+/home/jisookim/myos/src/programs/bf/bf.c:107:            loop--;
+/home/jisookim/myos/src/programs/bf/Makefile:2:	mkdir -p ./build
+/home/jisookim/myos/src/programs/bf/Makefile:3:	nasm -f elf ../stdlib/start.asm -o ./build/start.o
+/home/jisookim/myos/src/programs/bf/Makefile:4:	nasm -f elf ../stdlib/stdlib.asm -o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/bf/Makefile:5:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ./bf.c -o ./build/bf.o
+/home/jisookim/myos/src/programs/bf/Makefile:6:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/stdlib.c -o ./build/stdlib.o
+/home/jisookim/myos/src/programs/bf/Makefile:7:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/malloc.c -o ./build/malloc.o
+/home/jisookim/myos/src/programs/bf/Makefile:8:	i686-elf-ld -g -T ../shell/linker.ld -o ./bf.bin ./build/start.o ./build/bf.o ./build/stdlib.o ./build/malloc.o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/bf/Makefile:11:	rm -rf ./build/*
+/home/jisookim/myos/src/programs/bf/Makefile:12:	rm -rf ./bf.bin
+/home/jisookim/myos/src/programs/waiter/Makefile:2:	mkdir -p ./build
+/home/jisookim/myos/src/programs/waiter/Makefile:3:	nasm -f elf ../stdlib/start.asm -o ./build/start.o
+/home/jisookim/myos/src/programs/waiter/Makefile:4:	nasm -f elf ../stdlib/stdlib.asm -o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/waiter/Makefile:5:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ./waiter.c -o ./build/waiter.o
+/home/jisookim/myos/src/programs/waiter/Makefile:6:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/stdlib.c -o ./build/stdlib.o
+/home/jisookim/myos/src/programs/waiter/Makefile:7:	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/malloc.c -o ./build/malloc.o
+/home/jisookim/myos/src/programs/waiter/Makefile:8:	i686-elf-ld -g -relocatable -o ./build/waiter_full.o ./build/start.o ./build/waiter.o ./build/stdlib.o ./build/malloc.o ./build/stdlib.asm.o
+/home/jisookim/myos/src/programs/waiter/Makefile:9:	i686-elf-gcc -g -T ./linker.ld -o ./waiter.bin -ffreestanding -O0 -nostdlib -fpic -g ./build/waiter_full.o
+/home/jisookim/myos/src/programs/waiter/Makefile:12:	rm -rf ./build/*
+/home/jisookim/myos/src/programs/waiter/Makefile:13:	rm -rf ./waiter.bin
+/home/jisookim/myos/src/programs/waiter/linker.ld:2:OUTPUT_FORMAT("elf32-i386")
+/home/jisookim/myos/src/programs/blank/blank.asm:19:    ;mov byte [buffer+1], 0 ; Null-terminate
+/home/jisookim/myos/src/programs/blank/Makefile:2:	mkdir -p ./build
+/home/jisookim/myos/src/programs/blank/Makefile:3:	nasm -f elf ./blank.asm -o ./build/blank.o
+/home/jisookim/myos/src/programs/blank/Makefile:4:	i686-elf-gcc -g -T ./linker.ld -o ./blank.bin -ffreestanding -O0 -nostdlib -fpic -g ./build/blank.o
+/home/jisookim/myos/src/programs/blank/Makefile:7:	rm -rf ./build/blank.o
+/home/jisookim/myos/src/programs/blank/Makefile:8:	rm -rf ./blank.bin
+/home/jisookim/myos/src/programs/blank/linker.ld:2:OUTPUT_FORMAT("elf32-i386")
+/home/jisookim/myos/src/programs/stdlib/malloc.c:21:        if (cur->is_free && cur->size >= size)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:25:            if (cur->size >= size + sizeof(struct malloc_header) + 1)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:28:                new_free->size = cur->size - (size + sizeof(struct malloc_header));
+/home/jisookim/myos/src/programs/stdlib/malloc.c:29:                new_free->is_free = 1;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:30:                new_free->next = cur->next;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:31:                new_free->prev = cur;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:33:                if (cur->next)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:34:                    cur->next->prev = new_free;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:35:                cur->next = new_free;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:36:                cur->size = size;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:39:            cur->is_free = 0;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:43:        cur = cur->next;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:48:    if (new_chunk == (void *)-1)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:52:    new_chunk->size = size;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:53:    new_chunk->is_free = 0;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:54:    new_chunk->next = NULL;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:55:    new_chunk->prev = prev;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:59:        prev->next = new_chunk;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:73:    struct malloc_header *chunk = (struct malloc_header *)ptr - 1;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:74:    chunk->is_free = 1; // Free
+/home/jisookim/myos/src/programs/stdlib/malloc.c:78:    if (chunk->next && chunk->next->is_free)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:80:        chunk->size += sizeof(struct malloc_header) + chunk->next->size;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:81:        chunk->next = chunk->next->next;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:82:        if (chunk->next)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:83:            chunk->next->prev = chunk;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:87:    if (chunk->prev && chunk->prev->is_free)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:89:        chunk->prev->size += sizeof(struct malloc_header) + chunk->size;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:90:        chunk->prev->next = chunk->next;
+/home/jisookim/myos/src/programs/stdlib/malloc.c:91:        if (chunk->next)
+/home/jisookim/myos/src/programs/stdlib/malloc.c:92:            chunk->next->prev = chunk->prev;
+/home/jisookim/myos/src/programs/stdlib/stdlib.c:15:    n = -n;
+/home/jisookim/myos/src/programs/stdlib/stdlib.c:27:    s[i++] = '-';
+/home/jisookim/myos/src/programs/stdlib/stdlib.c:33:  for (j = 0, k = i - 1; j < k; j++, k--)
+/home/jisookim/myos/src/programs/stdlib/stdlib.c:47:    for (int i = 7; i >= 0; i--)
+/home/jisookim/myos/src/pci/pci.c:97://0000 0100  : DMA(Direct Memory Access) enable - Lan card can access RAM directly without using CPU
+/home/jisookim/myos/src/string/string.c:30:    return c - '0';
+/home/jisookim/myos/src/string/string.c:43:    // while (str[i] == '+' || str[i] == '-')
+/home/jisookim/myos/src/string/string.c:45:    //     if (str[i] == '-')
+/home/jisookim/myos/src/string/string.c:48:    //         sign = -1;
+/home/jisookim/myos/src/string/string.c:54:        result = result * 10 + str[i] - '0';
+/home/jisookim/myos/src/string/string.c:78:    return (unsigned char)*s1 - (unsigned char)*s2;
+/home/jisookim/myos/src/string/string.c:132:    while(n-- > 0)
+/home/jisookim/myos/src/string/string.c:140:            return u1 - u2; 
+/home/jisookim/myos/src/string/string.c:174:        n = -n;
+/home/jisookim/myos/src/string/string.c:188:        s[i++] = '-';
+/home/jisookim/myos/src/string/string.c:194:    for (j = 0, k = i - 1; j < k; j++, k--)
+/home/jisookim/myos/src/disk/streamer.c:18:    streamer->disk = disk;
+/home/jisookim/myos/src/disk/streamer.c:19:    streamer->pos = 0;
+/home/jisookim/myos/src/disk/streamer.c:27:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/disk/streamer.c:29:    streamer->pos = position;
+/home/jisookim/myos/src/disk/streamer.c:44:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/disk/streamer.c:49:    int sector_size = streamer->disk->sector_size;
+/home/jisookim/myos/src/disk/streamer.c:53:        int sector_index = streamer->pos / sector_size;
+/home/jisookim/myos/src/disk/streamer.c:54:        int offset = streamer->pos % sector_size;
+/home/jisookim/myos/src/disk/streamer.c:56:        if (to_read > (sector_size - offset))
+/home/jisookim/myos/src/disk/streamer.c:58:            to_read = sector_size - offset;
+/home/jisookim/myos/src/disk/streamer.c:60:        int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
+/home/jisookim/myos/src/disk/streamer.c:71:        streamer->pos += to_read;
+/home/jisookim/myos/src/disk/streamer.c:73:        total -= to_read;
+/home/jisookim/myos/src/disk/streamer.c:83:        return -MYOS_INVALID_ARG;
+/home/jisookim/myos/src/disk/streamer.c:88:    int sector_size = streamer->disk->sector_size;
+/home/jisookim/myos/src/disk/streamer.c:92:        int sector_index = streamer->pos / sector_size;
+/home/jisookim/myos/src/disk/streamer.c:93:        int offset = streamer->pos % sector_size;
+/home/jisookim/myos/src/disk/streamer.c:96:        if (to_write > (sector_size - offset))
+/home/jisookim/myos/src/disk/streamer.c:98:            to_write = sector_size - offset;
+/home/jisookim/myos/src/disk/streamer.c:101:        int res = disk_read_block(streamer->disk, sector_index, 1, buffer);
+/home/jisookim/myos/src/disk/streamer.c:112:        res = disk_write_block(streamer->disk, sector_index, 1, buffer);
+/home/jisookim/myos/src/disk/streamer.c:118:        streamer->pos += to_write;
+/home/jisookim/myos/src/disk/streamer.c:120:        total -= to_write;
+/home/jisookim/myos/src/disk/disk.c:30:  while ((insb(0x1F7) & 0x80) && --timeout > 0)
+/home/jisookim/myos/src/disk/disk.c:34:    return -MYOS_IO_TIMEOUT;
+/home/jisookim/myos/src/disk/disk.c:48:  while (--timeout > 0)
+/home/jisookim/myos/src/disk/disk.c:54:      return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/disk/disk.c:57:    return -MYOS_IO_TIMEOUT;
+/home/jisookim/myos/src/disk/disk.c:63:    reads sectors from the disk using LBA, accessing it as a linear sequence of 512-byte blocks.
+/home/jisookim/myos/src/disk/disk.c:64:    cpu->ATA port (0x1F0 ~ 0x1F7) use. 
+/home/jisookim/myos/src/disk/disk.c:153:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/disk/disk.c:165:        return -MYOS_IO_ERROR;
+/home/jisookim/myos/src/config.h:33:#define MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_END MYOS_PROGRAM_VIRTUAL_STACK_ADDRESS_START - MYOS_USER_PROGRAM_STACK_SIZE //because stack grows downwards
+/home/jisookim/myos/src/timer/timer.c:18:  // Divisor 보내기 (Lo -> Hi 순서)
+/home/jisookim/myos/src/timer/timer.c:38:  if (get_cur_task() && ((frame->cs & 0x03) == 0x03 || get_cur_task()->state == TASK_BLOCKED))
+/home/jisookim/myos/src/timer/timer.c:41:      current_task->ticks_usage++;
+/home/jisookim/myos/src/timer/timer.c:43:      if (current_task->ticks_usage > 10)
+/home/jisookim/myos/src/timer/timer.c:45:          if (current_task->priority < TASK_PRIORITY_LOW)
+/home/jisookim/myos/src/timer/timer.c:47:              current_task->priority++;
+/home/jisookim/myos/src/timer/timer.c:49:          current_task->ticks_usage = 0;
+/home/jisookim/myos/src/timer/timer.c:55:          next_task->ticks_usage = 0;
+/home/jisookim/myos/src/timer/timer.c:58:          task_return(&next_task->regs);
+/home/jisookim/myos/src/timer/timer.c:69:      // print_int(t->process->id);
+/home/jisookim/myos/src/timer/timer.c:71:      // print_int(t->priority);
+/home/jisookim/myos/src/kernel_print.c:22:  for (int y = 0; y < VGA_HEIGHT - 1; y++)
+/home/jisookim/myos/src/kernel_print.c:31:    terminal_putchar(' ', 0x00, x, VGA_HEIGHT - 1);
+/home/jisookim/myos/src/kernel_print.c:33:  terminal_row = VGA_HEIGHT - 1;
+/home/jisookim/myos/src/kernel_print.c:52:      terminal_column--;
+/home/jisookim/myos/src/kernel_print.c:107:    n = -n;
+/home/jisookim/myos/src/kernel_print.c:115:    s[i++] = '-';
+/home/jisookim/myos/src/kernel_print.c:121:  for (j = 0, k = i - 1; j < k; j++, k--)
+/home/jisookim/myos/src/kernel_print.c:142:  for (int i = 7; i >= 0; i--)
+/home/jisookim/myos/src/kernel_print.c:144:    buf[2 + (7 - i)] = hex_chars[(n >> (i * 4)) & 0xF];
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.h:14:#define RTL8139_MAC0 0x00 // MAC 주소 바이트 0-5
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:89:        slave_mask &= ~(1 << (irq - 8));
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:112:        return -1;
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:121:        return -1;
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:126:        return -1;
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:133:    outsw(port_addr + RTL8139_CAPR, (rx_read_ptr - 16) & 0xFFFF);
+/home/jisookim/myos/src/rtl8139_driver/rtl8139.c:142:        return -1;
+/home/jisookim/myos/src/net/arp.c:32:    if (ntohs(h_arp->operation) == ARP_OP_REPLY)
+/home/jisookim/myos/src/net/arp.c:35:        ft_memcpy(&sender_ip, h_arp->sender_ip, ETH_IP_LEN);
+/home/jisookim/myos/src/net/arp.c:36:        arp_cache_add(sender_ip, h_arp->sender_mac);
+/home/jisookim/myos/src/net/arp.c:38:    else if (ntohs(h_arp->operation) == ARP_OP_REQUEST)
+/home/jisookim/myos/src/net/arp.c:41:        ft_memcpy(&target, h_arp->target_ip, ETH_IP_LEN);
+/home/jisookim/myos/src/net/arp.c:48:            ft_memcpy(&sender_ip, h_arp->sender_ip, ETH_IP_LEN);
+/home/jisookim/myos/src/net/arp.c:49:            arp_cache_add(sender_ip, h_arp->sender_mac);
+/home/jisookim/myos/src/net/arp.c:65:    ft_memcpy(reply.target_mac, request->sender_mac, ETH_MAC_LEN);
+/home/jisookim/myos/src/net/arp.c:66:    ft_memcpy(reply.target_ip, request->sender_ip, ETH_IP_LEN);
+/home/jisookim/myos/src/net/arp.c:67:    ethernet_send(port_addr, (uint8_t*)&reply, (uint8_t*)request->sender_mac, rtl8139_get_mac(), ETH_TYPE_ARP, sizeof(struct arp_header));
+/home/jisookim/myos/src/net/ip.c:49:        len -= 2;
+/home/jisookim/myos/src/net/ip.c:65:    uint16_t received_checksum = header->header_checksum;
+/home/jisookim/myos/src/net/ip.c:67:    header->header_checksum = 0;
+/home/jisookim/myos/src/net/ip.c:69:    header->header_checksum = received_checksum;  // Restore original
+/home/jisookim/myos/src/net/ip.c:77:    uint16_t ip_total_len = ntohs(header->total_length);
+/home/jisookim/myos/src/net/ip.c:78:    uint32_t ip_header_len = (header->version_and_header_len & 0x0F) * 4;
+/home/jisookim/myos/src/net/ip.c:79:    uint32_t payload_len = ip_total_len - ip_header_len;
+/home/jisookim/myos/src/net/ip.c:81:    if (header->protocol == IP_PROTO_ICMP)
+/home/jisookim/myos/src/net/ip.c:84:        icmp_receive(port_addr, icmp_data, payload_len, header->src);
+/home/jisookim/myos/src/net/ip.c:86:    else if (header->protocol == IP_PROTO_TCP)
+/home/jisookim/myos/src/net/ip.c:88:        tcp_receive(port_addr, data + ip_header_len, payload_len, header->src);
+/home/jisookim/myos/src/net/ip.c:90:    else if (header->protocol == IP_PROTO_UDP)
+/home/jisookim/myos/src/net/icmp.c:9:   uint16_t received_checksum = header->checksum;
+/home/jisookim/myos/src/net/icmp.c:10:   header->checksum = 0;
+/home/jisookim/myos/src/net/icmp.c:12:   header->checksum = received_checksum;
+/home/jisookim/myos/src/net/icmp.c:19:    if (header->type == ICMP_ECHO_REQUEST)
+/home/jisookim/myos/src/net/icmp.c:28:    header->type = type;
+/home/jisookim/myos/src/net/icmp.c:29:    header->checksum = 0;
+/home/jisookim/myos/src/net/icmp.c:30:    header->checksum = checksum(data, len);
+/home/jisookim/myos/src/net/ethernet.c:13:    return -1;
+/home/jisookim/myos/src/net/ethernet.c:18:  ft_memcpy(header->dest, dest, ETH_MAC_LEN);
+/home/jisookim/myos/src/net/ethernet.c:19:  ft_memcpy(header->sender, src, ETH_MAC_LEN);
+/home/jisookim/myos/src/net/ethernet.c:20:  header->type = htons(type);
+/home/jisookim/myos/src/net/ethernet.c:32:  uint16_t type = ntohs(header->type);
+/home/jisookim/myos/src/net/ethernet.c:36:    ip_receive(port_addr, frame + ETH_HEADER_LEN, len - ETH_HEADER_LEN);
+/home/jisookim/myos/src/net/ethernet.c:40:    arp_receive(port_addr, frame + ETH_HEADER_LEN, len - ETH_HEADER_LEN);
+/home/jisookim/myos/src/net/ethernet.c:44:    return -1;
+/home/jisookim/myos/src/net/tcp.c:20:  uint32_t tcp_header_len = header->data_offset * 4;
+/home/jisookim/myos/src/net/tcp.c:30:  uint16_t original_checksum = header->checksum;
+/home/jisookim/myos/src/net/tcp.c:31:  header->checksum = 0;
+/home/jisookim/myos/src/net/tcp.c:40:  header->checksum = original_checksum;
+/home/jisookim/myos/src/net/tcp.c:53:  header->src_port = htons(socket->src_port);
+/home/jisookim/myos/src/net/tcp.c:54:  header->dst_port = htons(socket->dst_port);
+/home/jisookim/myos/src/net/tcp.c:55:  header->sequence_number = htonl(socket->seq);
+/home/jisookim/myos/src/net/tcp.c:56:  header->acknowledgment_number = htonl(socket->ack);
+/home/jisookim/myos/src/net/tcp.c:57:  header->data_offset = 5;
+/home/jisookim/myos/src/net/tcp.c:58:  header->reserved = 0;
+/home/jisookim/myos/src/net/tcp.c:59:  header->flags = flags;
+/home/jisookim/myos/src/net/tcp.c:60:  header->window_size = htons(MAX_TCP_BUF_SIZE);
+/home/jisookim/myos/src/net/tcp.c:61:  header->checksum = 0;
+/home/jisookim/myos/src/net/tcp.c:62:  header->urgent_pointer = 0;
+/home/jisookim/myos/src/net/tcp.c:69:  uint32_t dst_ip = socket->dst_ip;
+/home/jisookim/myos/src/net/tcp.c:71:  header->checksum = checksum;
+/home/jisookim/myos/src/net/tcp.c:80:  uint32_t header_len = tcp->data_offset * 4;
+/home/jisookim/myos/src/net/tcp.c:82:  int payload_len = len - header_len;
+/home/jisookim/myos/src/net/tcp.c:84:  uint16_t received_checksum = tcp->checksum;
+/home/jisookim/myos/src/net/tcp.c:85:  tcp->checksum = 0;
+/home/jisookim/myos/src/net/tcp.c:87:  tcp->checksum = received_checksum;
+/home/jisookim/myos/src/net/tcp.c:100:        socket_cache[i].socket.dst_port == ntohs(tcp->src_port) &&
+/home/jisookim/myos/src/net/tcp.c:101:        socket_cache[i].socket.src_port == ntohs(tcp->dst_port))
+/home/jisookim/myos/src/net/tcp.c:108:  if ((tcp->flags & TCP_SYN) && (tcp->flags & TCP_ACK))
+/home/jisookim/myos/src/net/tcp.c:114:  if (tcp->flags & TCP_SYN)
+/home/jisookim/myos/src/net/tcp.c:124:  if (tcp->flags & TCP_FIN)
+/home/jisookim/myos/src/net/tcp.c:127:    socket->ack = ntohl(tcp->sequence_number) + 1;
+/home/jisookim/myos/src/net/tcp.c:132:    socket->state = TCP_CLOSED;
+/home/jisookim/myos/src/net/tcp.c:140:        socket_count--;
+/home/jisookim/myos/src/net/tcp.c:147:  if (tcp->flags & TCP_PSH || payload_len > 0)
+/home/jisookim/myos/src/net/tcp.c:149:    socket->ack = ntohl(tcp->sequence_number) + payload_len;
+/home/jisookim/myos/src/net/tcp.c:152:       if (socket->recv_len + payload_len < MAX_TCP_BUF_SIZE)
+/home/jisookim/myos/src/net/tcp.c:154:          ft_memcpy(socket->recv_buf + socket->recv_len, payload, payload_len);
+/home/jisookim/myos/src/net/tcp.c:155:          socket->recv_len += payload_len;
+/home/jisookim/myos/src/net/tcp.c:165:  if (tcp->flags & TCP_ACK)
+/home/jisookim/myos/src/net/tcp.c:176:  int index = -1;
+/home/jisookim/myos/src/net/tcp.c:186:  if (index == -1)
+/home/jisookim/myos/src/net/tcp.c:192:  uint16_t client_port = ntohs(header->src_port);
+/home/jisookim/myos/src/net/tcp.c:193:  uint16_t server_port = ntohs(header->dst_port);
+/home/jisookim/myos/src/net/tcp.c:194:  uint32_t client_seq = ntohl(header->sequence_number);
+/home/jisookim/myos/src/net/tcp.c:206:  ft_memcpy(&cache->socket, &socket_new, sizeof(struct tcp_socket));
+/home/jisookim/myos/src/net/tcp.c:209:  tcp_send(port_addr, &cache->socket, TCP_SYN | TCP_ACK, NULL, 0);
+/home/jisookim/myos/src/net/tcp.c:220:    if (cache->socket.dst_ip == server_ip && (cache->socket.state == TCP_SYN_SENT || cache->socket.state == TCP_ESTABLISHED))
+/home/jisookim/myos/src/net/tcp.c:222:      uint32_t server_seq = ntohl(header->sequence_number);
+/home/jisookim/myos/src/net/tcp.c:223:      cache->socket.ack = server_seq + 1;
+/home/jisookim/myos/src/net/tcp.c:225:      if (cache->socket.state == TCP_SYN_SENT)
+/home/jisookim/myos/src/net/tcp.c:227:        cache->socket.seq++; // SYN flag consumes 1 sequence number
+/home/jisookim/myos/src/net/tcp.c:228:        cache->socket.state = TCP_ESTABLISHED;
+/home/jisookim/myos/src/net/tcp.c:231:      tcp_send(port_addr, &cache->socket, TCP_ACK, NULL, 0);
+/home/jisookim/myos/src/net/tcp.c:243:  cache->socket.src_ip = *(uint32_t *)rtl8139_get_ip();
+/home/jisookim/myos/src/net/tcp.c:244:  cache->socket.dst_ip = dst_ip;
+/home/jisookim/myos/src/net/tcp.c:245:  cache->socket.src_port = 12345;
+/home/jisookim/myos/src/net/tcp.c:246:  cache->socket.dst_port = dst_port;
+/home/jisookim/myos/src/net/tcp.c:247:  cache->socket.seq = get_tick() * 1000;
+/home/jisookim/myos/src/net/tcp.c:248:  cache->socket.ack = 0;
+/home/jisookim/myos/src/net/tcp.c:249:  cache->socket.state = TCP_SYN_SENT;
+/home/jisookim/myos/src/net/tcp.c:250:  tcp_send(port_addr, &cache->socket, TCP_SYN, NULL, 0);
+/home/jisookim/myos/src/net/tcp.c:266:  return -1;
+/home/jisookim/myos/src/net/tcp.c:281:    return -1;
+/home/jisookim/myos/src/net/tcp.c:287:  cache->socket.src_ip = *(uint32_t *)rtl8139_get_ip();
+/home/jisookim/myos/src/net/tcp.c:288:  cache->socket.dst_ip = dst_ip;
+/home/jisookim/myos/src/net/tcp.c:289:  cache->socket.src_port = next_port++;
+/home/jisookim/myos/src/net/tcp.c:293:  cache->socket.dst_port = dst_port;
+/home/jisookim/myos/src/net/tcp.c:294:  cache->socket.seq = get_tick() * 1000;
+/home/jisookim/myos/src/net/tcp.c:295:  cache->socket.ack = 0;
+/home/jisookim/myos/src/net/tcp.c:296:  cache->socket.state = TCP_SYN_SENT;
+/home/jisookim/myos/src/net/tcp.c:297:  tcp_send(port_addr, &cache->socket, TCP_SYN, NULL, 0);
+/home/jisookim/myos/src/net/tcp.c:306:    return -1;
+/home/jisookim/myos/src/net/tcp.c:309:  if (cache->socket.state != TCP_ESTABLISHED)
+/home/jisookim/myos/src/net/tcp.c:311:    return -1;
+/home/jisookim/myos/src/net/tcp.c:313:  tcp_send(port_addr, &cache->socket, TCP_PSH | TCP_ACK, data, len);
+/home/jisookim/myos/src/net/tcp.c:314:  cache->socket.seq += len;
+/home/jisookim/myos/src/net/tcp.c:322:    return -1;
+/home/jisookim/myos/src/net/tcp.c:326:  if (cache->socket.state != TCP_ESTABLISHED)
+/home/jisookim/myos/src/net/tcp.c:328:    return -1;
+/home/jisookim/myos/src/net/tcp.c:330:  cache->socket.state = TCP_FIN_WAIT;
+/home/jisookim/myos/src/net/tcp.c:331:  tcp_send(port_addr, &cache->socket, TCP_FIN | TCP_ACK, NULL, 0);
+/home/jisookim/myos/src/net/tcp.c:332:  cache->socket.seq += 1;
+/home/jisookim/myos/src/net/tcp.c:340:    return -1;
+/home/jisookim/myos/src/net/tcp.c:343:  if (socket->recv_len == 0)
+/home/jisookim/myos/src/net/tcp.c:346:  if (len < socket->recv_len)
+/home/jisookim/myos/src/net/tcp.c:352:    read_len = socket->recv_len;
+/home/jisookim/myos/src/net/tcp.c:354:  ft_memcpy(buf, socket->recv_buf, read_len);
+/home/jisookim/myos/src/net/tcp.c:355:  uint32_t remaining = socket->recv_len - read_len;
+/home/jisookim/myos/src/net/tcp.c:360:       socket->recv_buf[i] = socket->recv_buf[i + read_len];
+/home/jisookim/myos/src/net/tcp.c:363:  socket->recv_len = remaining;
+/home/jisookim/myos/src/net/tcp.h:29:    TCP_SYN_SENT     : client sent SYN, waiting for SYN-ACK
+/home/jisookim/myos/src/net/tcp.h:30:    TCP_SYN_RECEIVED : server received SYN, sent SYN-ACK

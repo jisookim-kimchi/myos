@@ -16,9 +16,11 @@ enum
 };
 enum task_state
 {
+    TASK_READY,
     TASK_RUNNING,
     TASK_BLOCKED,
     TASK_ZOMBIE,
+    TASK_DEAD,// TODO: option. 
 };
 
 //to store the state of a task
@@ -66,6 +68,7 @@ struct task* new_task(struct process* process);
 struct task* get_cur_task(void);
 struct task* get_next_task(void);
 void task_delete(struct task* task);
+int get_free_task_slot(void);
 
 int task_switch(struct task* task);
 int task_page();
@@ -82,7 +85,7 @@ int copy_from_task(struct task *task, void *user_buf, void *kernel_buf, int size
 void* task_get_stack_item(struct task* task, int index);
 
 void task_block(void *event_wait_channel);
-void task_wakeup(void *event_wait_channel);
+void task_wakeup_by_event(void *event_wait_channel);
 void task_sleep_until(int wait_ticks);
-void task_run_scheduled_tasks(uint32_t cur_tick);
+void task_wakeup_by_ticks(uint32_t cur_tick);
 #endif
