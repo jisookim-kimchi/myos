@@ -1,22 +1,35 @@
 #include "../stdlib/stdlib.h"
 
 volatile static int thread_test_count = 0;
+volatile int count_lock = 0;
 
 void thread1_count()
 {
     for (int i = 0; i < 10000; i++)
     {
+        mutex_lock(&count_lock);
         thread_test_count++;
+        mutex_unlock(&count_lock);
     }
+    print("Thread finished! Current count: ");
+    print_int(thread_test_count);
+    print("\n");
+
     thread_exit();
 }
 
 void thread2_count()
 {
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 100; i++)
     {
+        mutex_lock(&count_lock);
         thread_test_count++;
+        mutex_unlock(&count_lock);
     }
+    print("Thread finished! Current count: ");
+    print_int(thread_test_count);
+    print("\n");
+
     thread_exit();
 }
 
@@ -30,7 +43,7 @@ int main(int argc, char** argv)
 //thread test
 thread_create(thread1_count, 1);
 thread_create(thread1_count, 1);
-
+sleep(100);
   // Malloc/Free Test
   print("Malloc Test 1\n");
   void* p1 = malloc(512);

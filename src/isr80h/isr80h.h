@@ -17,6 +17,7 @@ enum SystemCommands
   SYSTEM_COMMAND_FSTAT,
   SYSTEM_COMMAND_SET_FOCUS,
   SYSTEM_COMMAND_THREAD_CREATE,
+  SYSTEM_COMMAND_THREAD_EXIT,
 };
 
 void isr80h_register_command_call();

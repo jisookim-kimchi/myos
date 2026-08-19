@@ -1,9 +1,9 @@
 #include "isr80h.h"
 #include "../idt/idt.h"
 #include "io.h"
-#include "user_heap.h"
-#include "thread.h"
 #include "process.h"
+#include "thread.h"
+#include "user_heap.h"
 
 void isr80h_register_command_call()
 {
@@ -21,4 +21,5 @@ void isr80h_register_command_call()
   isr80h_register_command(SYSTEM_COMMAND_FSTAT, sys_call9_fstat);
   isr80h_register_command(SYSTEM_COMMAND_SET_FOCUS, sys_call_set_focus);
   isr80h_register_command(SYSTEM_COMMAND_THREAD_CREATE, sys_call_thread_create);
+  isr80h_register_command(SYSTEM_COMMAND_THREAD_EXIT, sys_call_thread_exit);
 }

@@ -23,3 +23,25 @@ void *sys_call_thread_create(struct interrupt_frame *frame)
     }
     return (void *)(uintptr_t)0;
 }
+
+void *sys_call_thread_exit(struct interrupt_frame *frame)
+{
+    struct task* current_thread = get_cur_task();
+    task_delete(current_thread);
+
+    while (1)
+    {
+        struct task* next_task = get_next_task();
+        if (next_task && next_task->state == TASK_READY)
+        {
+            next_task->state = TASK_RUNNING;
+            task_switch(next_task);
+            task_return(&next_task->regs);
+        }
+
+        //todo solving error
+        //error cr2 0x0
+    }
+
+    return 0;
+}

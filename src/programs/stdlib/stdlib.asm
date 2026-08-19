@@ -15,7 +15,8 @@ global wait_pid
 global exec
 global fstat
 global set_focus
-global sys_thread_create;
+global sys_thread_create
+global sys_thread_exit
 
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
@@ -31,6 +32,7 @@ global sys_thread_create;
 %define SYSCALL_FSTAT 12
 %define SYSCALL_SET_FOCUS 13
 %define SYSCALL_THREAD_CREATE 14
+%define SYSCALL_THREAD_EXIT 15
 
 print:
     mov eax, SYSCALL_PRINT
@@ -87,8 +89,6 @@ exec:
     int 0x80
     ret
 
-%define SYSCALL_SET_FOCUS 13
-
 set_focus:
     mov eax, SYSCALL_SET_FOCUS
     int 0x80
@@ -101,5 +101,10 @@ fstat:
 
 sys_thread_create:
     mov eax, SYSCALL_THREAD_CREATE
+    int 0x80
+    ret
+
+sys_thread_exit:
+    mov eax, SYSCALL_THREAD_EXIT
     int 0x80
     ret

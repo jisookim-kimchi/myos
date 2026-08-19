@@ -3,6 +3,9 @@
 #define THREAD_STACK_SIZE 4096
 #define THREAD_MAX_NUM 8
 
+extern void mutex_lock(volatile int *lock_ptr);
+extern void mutex_unlock(volatile int *lock_ptr);
+
 __attribute__((section(".thread_stack")))
 static uint8_t thread_stack_pool[THREAD_MAX_NUM][THREAD_STACK_SIZE];
 
@@ -20,13 +23,10 @@ int thread_create(void *entry_point, int priority)
     print_hex((uintptr_t)stack_top);
     print("\n");
     thread_idx++;
-    return sys_thread_create(entry_point,(void*)stack_top, priority);
+    return sys_thread_create(entry_point, (void*)stack_top, priority);
 }
 
-int thread_exit()
+int thread_exit(void)
 {
-    while(1)
-    {
-
-    }
+    return sys_thread_exit();
 }

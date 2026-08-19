@@ -274,7 +274,7 @@ void task_delete(struct task *task)
 
 int task_switch(struct task *task)
 {
-  uint64_t start_tsc = read_tsc();
+  //uint64_t start_tsc = read_tsc();
 
   task_cur = task;
   paging_switch(task->page_directory);
@@ -285,12 +285,12 @@ int task_switch(struct task *task)
       tss.esp0 = (uint32_t)task->kstack + 4096;
   }
 
-  uint64_t end_tsc = read_tsc();
-  last_context_switch_cycles = (uint32_t)(end_tsc - start_tsc);
+  //uint64_t end_tsc = read_tsc();
+  //last_context_switch_cycles = (uint32_t)(end_tsc - start_tsc);
 
-  print("Context Switch TSC Ticks : ");
-  print_int(last_context_switch_cycles);
-  print("\n");
+  //print("Context Switch TSC Ticks : ");
+  //print_int(last_context_switch_cycles);
+  //print("\n");
 
   return 0;
 }
