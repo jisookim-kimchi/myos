@@ -23,4 +23,8 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+    .thread_stack (NOLOAD) : ALIGN(4096)
+    {
+        *(.thread_stack)
+    }
 }

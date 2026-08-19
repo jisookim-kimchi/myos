@@ -218,33 +218,47 @@ Each entry represents a 4KB memory block.
 
 When `malloc` is called -> calculates the required blocks via `heap_calculate_required_blocks(size)` -> searches for contiguous free space that satisfies the requested size starting from the beginning of the table (Index 0) -> calls `heap_mark_blocks_as_taken()` to mark them as "taken" -> returns the address.
 
-################################################ TODO
-##################################################
+```markdown
+#### Fault
+```c
+// test code in shell.c
+int *a = NULL;fault_CR2
+*a = 1;
+```
+![Fault](image/fault_CR2.jpg)
+![Fault CR2](image/fault_cr2_v2.jpg)
 
 #### Interrupt
-When ring3 calls `int 0x80` ->
+When ring3(user mode) calls `int 0x80`(I would say it is like Software BUS, it connects usre mode to kernel mode) ->
+![shell call kernel](image/esp_change_shell_to_kernel.jpg)
 The CPU looks at the TSS, shifts the stack pointer to `ESP0` (kernel stack), and backs up the original states (user stack, address, code location) onto the kernel stack.
 Then it restores states (see Restore state in `idt.asm`) via `popad` and returns via `iret`.
 In `idt.asm`:
 Note that `pop` increments esp by 4, which is different from `push`. Restoring `esp` into register was new to me.
+
+``` Restore code.
 ; Restore state
-    popad          ; Restores saved EAX, EBX... all 8 registers at once!
     pop gs         ; Pop segment registers one by one
     pop fs         ;
     pop es         ;
     pop ds         ;
+    popad          ; Restores saved EAX, EBX... all 8 registers at once!
     add esp, 8     ;
     iret           ; Return to Ring 3
+```
 
 1. IDT (Interrupt Descriptor Table):
 Entries from 0 to 255 containing information for each interrupt.
 Jumps to ISR when a specific signal number triggers!
 Initialized with `idt_init()`.
+
 2. ISR (Interrupt Service Routine):
 The function that executes the actual interrupt.
 This was a bit complicated. I referenced assembly in `idt.asm`, processed common routines, and called the C function.
+
 nasm assembly syntax was quite challenging, and I relied heavily on OSDev Wiki.
 Also, the first member of the structure actually points to the top of the stack (the lowest address). I encountered errors initially because I didn't know this.
+
 3. ISR80h:
 Puts the system call number in EAX and jumps to `interrupt_128`.
 Jumps to `interrupt_handler` after executing `pushad`.
@@ -260,8 +274,11 @@ Reads data from ports using the I/O bus.
 Pressing a key triggers IRQ 1 -> jumps to IDT 0x21 -> reads data from port 0x60 (keyboard data port).
 `io.asm` acts as the driver.
 
-#### TASK
-A task is similar to a thread.
+```c
+//TODO debugging
+```
+#### TASK/Thread...
+A task is a thread.
 How does a task use process shared resources?
 1. Create a process first.
 2. When calling `init_task`, creates a 4GB memory directory. Here, `task->process = process`.
@@ -269,6 +286,12 @@ How does a task use process shared resources?
 4. Important point:
 `process_map_memory` maps virtual memory to physical memory.
 Each task has a page directory. `process_map_binary` maps the process physical address to the page directory. This means multiple tasks can share the process physical memory space.
+
+> think how distribute memory to thread..
+> malloc...? dangerous and Latency,,
+> stack....?  this creates too much dependency on the caller...
+> how to share process resources and how to make it independant...??
+> okay,,ja if i make a thread in a proc their cr3 are same right ..okay..should be same... then .data/.bss area..okay global variables ..okay ! or should i make an other memory area..? in the linker.ld?
 
 #### Scheduling (Context Switching)
 1. Scheduling:

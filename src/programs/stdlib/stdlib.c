@@ -38,6 +38,13 @@ void itoa(int n, char s[])
   }
 }
 
+void print_int(int n)
+{
+    char buf[12];
+    itoa(n, buf);
+    print(buf);
+}
+
 void print_hex(uint32_t n)
 {
     char hex_chars[] = "0123456789ABCDEF";

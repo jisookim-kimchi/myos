@@ -6,11 +6,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+int sys_thread_create(void *entry_point, void *user_stack, int priority);
+int thread_create(void *entry_point, int priority);
+int thread_exit();
+
 void print(const char *str);
 void putchar(char c);
 void sleep(uint32_t ms);
 void itoa(int n, char s[]);
 void print_hex(uint32_t n);
+void print_int(int n);
 size_t ft_strlen(const char *str);
 char *ft_strcpy(char *dest, const char *src);
 

@@ -1,9 +1,35 @@
 #include "../stdlib/stdlib.h"
 
+volatile static int thread_test_count = 0;
+
+void thread1_count()
+{
+    for (int i = 0; i < 10000; i++)
+    {
+        thread_test_count++;
+    }
+    thread_exit();
+}
+
+void thread2_count()
+{
+    for (int i = 0; i < 10000; i++)
+    {
+        thread_test_count++;
+    }
+    thread_exit();
+}
+
 int main(int argc, char** argv)
 {
-  print("Shell: Starting...\n");
+  //print("Shell: Starting...\n");
 
+//   int *a = NULL;
+//   *a = 1;
+
+//thread test
+thread_create(thread1_count, 1);
+thread_create(thread1_count, 1);
 
   // Malloc/Free Test
   print("Malloc Test 1\n");
