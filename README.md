@@ -274,9 +274,6 @@ Reads data from ports using the I/O bus.
 Pressing a key triggers IRQ 1 -> jumps to IDT 0x21 -> reads data from port 0x60 (keyboard data port).
 `io.asm` acts as the driver.
 
-```c
-//TODO debugging
-```
 #### TASK/Thread...
 A task is a thread.
 How does a task use process shared resources?
@@ -285,7 +282,8 @@ How does a task use process shared resources?
 3. Load file data -> load into physical memory.
 4. Important point:
 `process_map_memory` maps virtual memory to physical memory.
-Each task has a page directory. `process_map_binary` maps the process physical address to the page directory. This means multiple tasks can share the process physical memory space.
+Each task has a page directory. `process_map_binary` maps the process physical address to the page directory. 
+This means multiple tasks can share the process physical memory space.
   
 > think how distribute memory to thread..
 > malloc...? dangerous and Latency,,
@@ -313,29 +311,36 @@ Each task has a page directory. `process_map_binary` maps the process physical a
 
 ![lock](image/thread1_count_stack.jpg).  
 
-#### Scheduling (Context Switching)
-1. Scheduling:
-Selects the next task to run by following the list's next pointer in a Round-Robin fashion.
-Uses timer interrupts to perform preemptive scheduling every 10ms.
-The OS forces a switch even if the task doesn't yield.
-Why preemptive?
-Because even if a program gets stuck in a bug, the OS forces a switch every 10ms so it doesn't freeze.
-Implementing a priority queue to schedule based on priorities could be a good improvement.
-Currently, I just implemented the basic logic.
+
+#### Scheduling (Context Switching)  
+1. Scheduling: Preemptive Priority-Based Scheduling.
+Selects the next task to run by following the list's next pointer in a Round-Robin style(Circut).  
+Uses timer interrupts to perform preemptive scheduling every 10ms.  
+The OS forces a switch even if the task doesn't yield.  
+Why preemptive?  
+Because even if a program gets stuck in a bug, the OS forces a switch every 10ms so it doesn't freeze.  
+Implementing a priority queue to schedule based on priorities could be a good improvement.  
 How is priority distinguished? -> If a task runs for 100ms continuously, its priority is lowered to keep the system responsive.
 
 Alternative approaches:
-Assigning fixed priorities to each task (important in embedded systems), or reservation schemes.
-2. Context Switching:
-`task_switch` and `task_return`.
-3. Paging Switch (CR3 Switch):
-`paging_switch(task->page_directory)`.
-Puts the page directory address of the new task into the CR3 register.
-At this moment, the virtual memory space observed by the CPU instantly changes from Task A's world to Task B's world (code region and 16KB stack are swapped).
-4. Privilege Recovery (TSS Update):
-`tss.esp0 = main_task_create->kstack + 4096`.
-TSS (Task State Segment): Informs the CPU of the kernel stack (Ring 0) to use when an interrupt occurs in user mode (Ring 3).
-Since each task has its own kernel stack, the TSS must be updated on every switch!
+Assigning fixed priorities to each task (important in embedded systems), or reservation schemes.  
+2. Context Switching:  
+`task_switch` and `task_return`.  
+3. Paging Switch (CR3 Switch):  
+`paging_switch(task->page_directory)`.  
+Puts the page directory address of the new task into the CR3 register.  
+At this moment, the virtual memory space observed by the CPU instantly changes from Task A's world to Task B's world (code region and 16KB stack are swapped).  
+4. Privilege Recovery (TSS Update):  
+`tss.esp0 = main_task_create->kstack + 4096`.  
+TSS (Task State Segment): Informs the CPU of the kernel stack (Ring 0) to use when an interrupt occurs in user mode (Ring 3).  
+Since each task has its own kernel stack, the TSS must be updated on every switch!  
+
+* NOTE: Currently in MyOS, the shell keeps running even when idle (wasting CPU cycles). 
+> need to add IDLE STATE FUNCTION.
+
+* NOTE: since my LOCK is busy-way.. so i need to change mutex style.. dann BLOCKED!
+
+* NOTE : need to make thread_join
 
 #### PROCESS
 A container (house) that includes memory, files, etc.
