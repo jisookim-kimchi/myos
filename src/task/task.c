@@ -255,7 +255,9 @@ void task_delete(struct task *task)
     task_tail = task->prev;
 
   if (task == task_cur)
-    task_cur = task->next;
+  {
+    task_cur = task->next ? task->next : task_head;
+  }
 
   //only main task can free the page directory
   if (task->process && task->process->main_task == task)

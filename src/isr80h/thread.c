@@ -1,5 +1,6 @@
 #include "thread.h"
 #include "../../src/task/task.h"
+#include "../../src/task/process.h"
 
 void *sys_call_thread_create(struct interrupt_frame *frame)
 {
@@ -27,6 +28,12 @@ void *sys_call_thread_create(struct interrupt_frame *frame)
 void *sys_call_thread_exit(struct interrupt_frame *frame)
 {
     struct task* current_thread = get_cur_task();
+
+    if (current_thread->process && current_thread->process->main_task)
+    {
+        current_thread->process->main_task->state = TASK_READY;
+    }
+
     task_delete(current_thread);
 
     while (1)
@@ -38,9 +45,6 @@ void *sys_call_thread_exit(struct interrupt_frame *frame)
             task_switch(next_task);
             task_return(&next_task->regs);
         }
-
-        //todo solving error
-        //error cr2 0x0
     }
 
     return 0;

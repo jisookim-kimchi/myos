@@ -286,12 +286,32 @@ How does a task use process shared resources?
 4. Important point:
 `process_map_memory` maps virtual memory to physical memory.
 Each task has a page directory. `process_map_binary` maps the process physical address to the page directory. This means multiple tasks can share the process physical memory space.
-
+  
 > think how distribute memory to thread..
 > malloc...? dangerous and Latency,,
 > stack....?  this creates too much dependency on the caller...
 > how to share process resources and how to make it independant...??
 > okay,,ja if i make a thread in a proc their cr3 are same right ..okay..should be same... then .data/.bss area..okay global variables ..okay ! or should i make an other memory area..? in the linker.ld?
+  
+> `sys_thread_exit` bug: after called it , the scheduler must switch to the next_task.
+>but if (next_task == main_task), since the main task was not in `TASK_READY` state, QEMU hung in an infinite loop. 
+>i need to set it's state to `TASK_READY`.
+
+![sys_thread_exit_bug](image/sys_thread_exit_bug.jpg)  
+  
+> task_delete bug : use After Free
+> `task_cur` was not updated before the task memory was freed (`kfree`). Consequently, `get_next_task()` attempted to read `task_cur->next` from the freed memory block (`0xF000EF57`),  > > where is not allocated space...
+> so that if `task == task_cur`, `task_cur` is safely updated to `task->next ? task->next : task_head`.
+
+![task_delete_bug](image/task_delete_bug.jpg)  
+  
+> 'data_race' bug : since Threads sharing others except of registers and it's stacks so .bss/.data/.heap is shared,  
+
+![data_race](image/data_race.jpg) --> need to make mutex!
+
+> 'lock' check : 
+
+![lock](image/thread1_count_stack.jpg).  
 
 #### Scheduling (Context Switching)
 1. Scheduling:
