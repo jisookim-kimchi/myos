@@ -30,3 +30,8 @@ int thread_exit(void)
 {
     return sys_thread_exit();
 }
+
+int thread_join(int thread_id)
+{
+    return sys_thread_join(thread_id);
+}

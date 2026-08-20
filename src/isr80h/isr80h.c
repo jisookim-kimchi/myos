@@ -22,4 +22,5 @@ void isr80h_register_command_call()
   isr80h_register_command(SYSTEM_COMMAND_SET_FOCUS, sys_call_set_focus);
   isr80h_register_command(SYSTEM_COMMAND_THREAD_CREATE, sys_call_thread_create);
   isr80h_register_command(SYSTEM_COMMAND_THREAD_EXIT, sys_call_thread_exit);
+  isr80h_register_command(SYSTEM_COMMAND_THREAD_JOIN, sys_thread_join);
 }

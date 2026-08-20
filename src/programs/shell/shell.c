@@ -3,9 +3,12 @@
 volatile static int thread_test_count = 0;
 volatile int count_lock = 0;
 
+
+int t1 = 0;
+int t2 = 0;
 void thread1_count()
 {
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 100000; i++)
     {
         mutex_lock(&count_lock);
         thread_test_count++;
@@ -20,7 +23,8 @@ void thread1_count()
 
 void thread2_count()
 {
-    for (int i = 0; i < 100; i++)
+    thread_join(t1);
+    for (int i = 0; i < 10000; i++)
     {
         mutex_lock(&count_lock);
         thread_test_count++;
@@ -41,9 +45,20 @@ int main(int argc, char** argv)
 //   *a = 1;
 
 //thread test
-thread_create(thread1_count, 1);
-thread_create(thread1_count, 1);
-sleep(100);
+  t1 = thread_create(thread1_count, 1);
+  print("t1 : \n");
+  print_int(t1);
+  print("\n");
+
+  int t2 = thread_create(thread2_count, 1);
+  print("t2 : \n");
+  print_int(t2);
+  print("\n");
+  
+  thread_join(t2);
+
+  sleep(100);
+ 
   // Malloc/Free Test
   print("Malloc Test 1\n");
   void* p1 = malloc(512);

@@ -17,6 +17,7 @@ global fstat
 global set_focus
 global sys_thread_create
 global sys_thread_exit
+global sys_thread_join
 
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
@@ -33,6 +34,7 @@ global sys_thread_exit
 %define SYSCALL_SET_FOCUS 13
 %define SYSCALL_THREAD_CREATE 14
 %define SYSCALL_THREAD_EXIT 15
+%define SYSCALL_THREAD_JOIN 16
 
 print:
     mov eax, SYSCALL_PRINT
@@ -106,5 +108,10 @@ sys_thread_create:
 
 sys_thread_exit:
     mov eax, SYSCALL_THREAD_EXIT
+    int 0x80
+    ret
+
+sys_thread_join:
+    mov eax, SYSCALL_THREAD_JOIN
     int 0x80
     ret

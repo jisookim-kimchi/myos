@@ -21,6 +21,7 @@ static uint8_t task_kernel_stacks[MYOS_MAX_TASKS][4096]; //total 768kb
 
 int init_task(struct task *task, struct process *proc)
 {
+  task->thread_id = 0;
   task->priority = TASK_PRIORITY_MEDIUM;
   task->regs.ip = MYOS_PROGRAM_VIRTUAL_ADDRESS;
   task->regs.ss = MYOS_USER_DATA_SEGMENT;
@@ -139,10 +140,12 @@ struct task *task_create(struct process *proc, void *entry_point, void *user_sta
     task->kstack = NULL;
     return NULL;
   }
-
+  static int next_thread_id = 1;
   task->regs.ip = (uint32_t)entry_point;
   task->regs.esp = (uint32_t)user_stack;
   task->state = TASK_READY;
+  task->thread_id = next_thread_id++;
+
 
   task_add_tail(task);
   proc->task[proc->num_activated_tasks++] = task;
@@ -315,15 +318,12 @@ int task_page()
   return 0;
 }
 
-// index 0 is return address. index 1 is arg1, index 2 is the second arg,
-// and so on. since data is stacked on esp, we use the index to access a
-// specific value.
 
 void *task_get_stack_item(struct task *task, int index)
 {
   void *result = 0;
 
-  // calculate virtual address of item on user stack
+  // since esp is the top of the stack if index 0 return address, if 1 is arg1, if 2 is arg2 ..
   uint32_t virtual_addr = task->regs.esp + (index * sizeof(uint32_t));
 
   // check : stack item is within the user zone (>= 256MB)
@@ -511,4 +511,42 @@ int get_free_task_slot(void)
         }
     }
     return -MYOS_ERROR_NO_MEMORY; //task table is full.
+}
+
+void tasks_log(void)
+{
+  struct task *t = task_head;
+  int idx = 0;
+  print("\n   Tasks logs     \n");
+  while (t)
+  {
+    print("Task: ");
+    print_int(t->thread_id);
+    print(", PID: ");
+    print_int(t->process->id);
+    print(", State: ");
+    print_int(t->state);
+    print(", Priority: ");
+    print_int(t->priority);
+    print(", Stack: ");
+    print_int((uint32_t)(uintptr_t)t->kstack);
+    print(", Page Dir: ");
+    print_int((uint32_t)(uintptr_t)t->page_directory);
+    print("\n");
+    t = t->next;
+    idx++;
+  }
+  print("\n");
+}
+
+struct task* task_get_by_id(int thread_id)
+{
+    struct task *t = task_head;
+    while (t)
+    {
+        if (t->thread_id == thread_id)
+          return t;
+        t = t->next;
+    }
+    return NULL;
 }

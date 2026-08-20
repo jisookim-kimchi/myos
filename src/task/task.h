@@ -59,6 +59,7 @@ struct task
   uint32_t sleep_expiry;
   int priority;
   int ticks_usage;
+  int thread_id;
 };
 
 int init_task(struct task* task, struct process* process);
@@ -69,6 +70,8 @@ struct task* get_cur_task(void);
 struct task* get_next_task(void);
 void task_delete(struct task* task);
 int get_free_task_slot(void);
+void schedule(void);
+void tasks_log(void);
 
 int task_switch(struct task* task);
 int task_page();
@@ -90,4 +93,5 @@ void task_sleep_until(int wait_ticks);
 void task_wakeup_by_ticks(uint32_t cur_tick);
 
 struct task *task_create(struct process *proc, void *entry_point, void *user_stack);
+struct task* task_get_by_id(int thread_id);
 #endif

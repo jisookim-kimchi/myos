@@ -45,7 +45,6 @@ void idt_zero()
   print("IDT is working correctly!\n");
 }
 
-
 void page_fault_handler(struct interrupt_frame* frame)
 {
   uint32_t faulting_address = get_faulting_address();

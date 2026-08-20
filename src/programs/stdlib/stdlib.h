@@ -13,8 +13,12 @@ struct file_stat
 
 int sys_thread_create(void *entry_point, void *user_stack, int priority);
 int sys_thread_exit(void);
+int sys_thread_join(int thread_id);
+
 int thread_create(void *entry_point, int priority);
 int thread_exit(void);
+int thread_join(int thread_id);
+
 void mutex_lock(volatile int *lock_ptr);
 void mutex_unlock(volatile int *lock_ptr);
 

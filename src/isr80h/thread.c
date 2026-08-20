@@ -18,24 +18,20 @@ void *sys_call_thread_create(struct interrupt_frame *frame)
     {
         return (void *)(uintptr_t)-1;
     }
-    if (priority > 0)
+    if (priority >= TASK_PRIORITY_HIGH && priority <= TASK_PRIORITY_LOW)
     {
         new_task->priority = priority;
     }
-    return (void *)(uintptr_t)0;
+    return (void *)(uintptr_t)new_task->thread_id;
 }
 
 void *sys_call_thread_exit(struct interrupt_frame *frame)
 {
     struct task* current_thread = get_cur_task();
-
-    if (current_thread->process && current_thread->process->main_task)
-    {
-        current_thread->process->main_task->state = TASK_READY;
-    }
+    task_wakeup_by_event((void*)current_thread);
 
     task_delete(current_thread);
-
+    tasks_log();
     while (1)
     {
         struct task* next_task = get_next_task();
@@ -49,3 +45,23 @@ void *sys_call_thread_exit(struct interrupt_frame *frame)
 
     return 0;
 }
+
+void *sys_thread_join(struct interrupt_frame *frame)
+{
+    struct task *current_task = get_cur_task();
+    int target_tid = (int)(uintptr_t)task_get_stack_item(current_task, 1);
+    struct task *target_task = task_get_by_id(target_tid);
+    if (target_task == NULL || target_task->state == TASK_DEAD)
+    {
+        return (void*)0;
+    }
+    else if (target_task && target_task->state != TASK_DEAD)
+    {
+        current_task->event_wait_channel = (void *)target_task;
+        current_task->state = TASK_BLOCKED;
+        schedule();
+    }
+
+    return (void *)0;
+}
+
