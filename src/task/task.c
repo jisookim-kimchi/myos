@@ -162,9 +162,7 @@ struct task *get_next_task()
 {
   if (!task_head)
     return 0;
-  struct task *t = task_cur->next;
-  if (!t)
-    t = task_head;
+  struct task *t = (task_cur && task_cur->next) ? task_cur->next : task_head;
   struct task *start_task = t;
 
   while (1)
@@ -201,10 +199,9 @@ struct task *get_next_task()
       if (!t) t = task_head;
       if (t == start_task) break;
   }
-  //TODO think
-  // if (task_cur && task_cur->state == TASK_RUNNING)
-  //   return task_cur;
-  return task_cur;
+  if (task_cur && task_cur->state == TASK_RUNNING)
+    return task_cur;
+  return NULL;
 }
 
 void schedule(void)
@@ -423,8 +420,6 @@ int copy_string_from_task(struct task *task, void *virtual, void *phys, int max)
   paging_switch(task->page_directory);
   ft_strncpy(phys, virtual, max);
   ((char*)phys)[max-1] = '\0';
-  paging_switch(paging_get_kernel_chunk());
-
   return 0;
 }
 
@@ -442,7 +437,6 @@ int copy_to_task(struct task *task, void *kernel_buf, void *user_buf, int size)
 
   paging_switch(task->page_directory);
   ft_memcpy(user_buf, kernel_buf, size);
-  paging_switch(paging_get_kernel_chunk());
 
   return 0;
 }
@@ -460,7 +454,6 @@ int copy_from_task(struct task *task, void *user_buf, void *kernel_buf, int size
 
   paging_switch(task->page_directory);
   ft_memcpy(kernel_buf, user_buf, size);
-  paging_switch(paging_get_kernel_chunk());
 
   return 0;
 }

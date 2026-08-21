@@ -311,6 +311,10 @@ This means multiple tasks can share the process physical memory space.
 
 ![lock](image/thread1_count_stack.jpg).  
 
+![Deadlock_bug](image/Deadlock_bug.jpg).
+since from compiler perspective, all was correct so it's hard to find...
+so i made task_log() function and then i could check which thread was blocked...
+the issue was i did hardcoding just in sys_thread_exit_call() after that just let wake up main thread, so it was wrong! so i changed it to wake_up_by_event()
 
 #### Scheduling (Context Switching)  
 1. Scheduling: Preemptive Priority-Based Scheduling.
@@ -341,6 +345,9 @@ Since each task has its own kernel stack, the TSS must be updated on every switc
 * NOTE: since my LOCK is busy-way.. so i need to change mutex style.. dann BLOCKED!
 
 * NOTE : need to make thread_join
+
+#### Thread bench 
+
 
 #### PROCESS
 A container (house) that includes memory, files, etc.

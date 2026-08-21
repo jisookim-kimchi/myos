@@ -1,4 +1,5 @@
 #include "../stdlib/stdlib.h"
+#include "../bench/bench.h"
 
 volatile static int thread_test_count = 0;
 volatile int count_lock = 0;
@@ -45,20 +46,40 @@ int main(int argc, char** argv)
 //   *a = 1;
 
 //thread test
-  t1 = thread_create(thread1_count, 1);
+  t1 = thread_create(ping, 1);
   print("t1 : \n");
   print_int(t1);
   print("\n");
 
-  int t2 = thread_create(thread2_count, 1);
+  t2 = thread_create(pong, 1);
   print("t2 : \n");
   print_int(t2);
   print("\n");
   
+  thread_join(t1);
   thread_join(t2);
 
-  sleep(100);
- 
+  uint32_t total_cycles = 0;
+  for (int i = 0; i < ping_count; i++)
+  {
+      total_cycles += latency[i];
+  }
+  uint32_t avg_cycles = (ping_count > 0) ? (total_cycles / ping_count) : 0;
+  print("\n                                      \n");
+  print("   Thread Ping-Pong latency Check    \n");
+  print("                                      \n");
+  print("Total Switched Samples : ");
+  print_int(ping_count);
+  print("\n");
+  
+  print("First Latency   : ");
+  print_int(latency[0]);
+  print(" cycles\n");
+  print("Average Latency : ");
+  print_int(avg_cycles);
+  print(" cycles\n");
+  print("                                      \n\n");
+
   // Malloc/Free Test
   print("Malloc Test 1\n");
   void* p1 = malloc(512);
@@ -123,7 +144,7 @@ int main(int argc, char** argv)
   char cmd[256];
   int idx = 0;
   
-  print("MYOS>> ");
+  print("SHELL>> ");
   while (1)
   {
     char c = getkey();
@@ -176,7 +197,7 @@ int main(int argc, char** argv)
       }
 
       idx = 0;
-      print("MYOS>> ");
+      print("SHELL> ");
       continue;
     }
     

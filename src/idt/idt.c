@@ -153,18 +153,10 @@ void isr80h_handler(struct interrupt_frame* frame)
 {
   void* res = NULL;
   int ask = frame->eax; // System call command is in EAX
-  paging_switch_to_kernel();
   save_registers(frame);
 
   res = isr80h_handle_command(ask, frame);
   frame->eax = (uint32_t)(uintptr_t)res;
-
-  struct task* t = get_cur_task();
-  if (t)
-  {
-    paging_switch(t->page_directory);
-  }
-
 }
 
 //save the cur task;s state

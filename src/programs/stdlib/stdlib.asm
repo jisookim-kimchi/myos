@@ -18,6 +18,9 @@ global set_focus
 global sys_thread_create
 global sys_thread_exit
 global sys_thread_join
+global task_block
+global task_wakeup
+global read_tsc
 
 %define SYSCALL_PRINT 1
 %define SYSCALL_GET_KEY 2
@@ -35,6 +38,8 @@ global sys_thread_join
 %define SYSCALL_THREAD_CREATE 14
 %define SYSCALL_THREAD_EXIT 15
 %define SYSCALL_THREAD_JOIN 16
+%define SYSCALL_TASK_BLOCK 17
+%define SYSCALL_TASK_WAKEUP 18
 
 print:
     mov eax, SYSCALL_PRINT
@@ -114,4 +119,18 @@ sys_thread_exit:
 sys_thread_join:
     mov eax, SYSCALL_THREAD_JOIN
     int 0x80
+    ret
+
+task_block:
+    mov eax, SYSCALL_TASK_BLOCK
+    int 0x80
+    ret
+
+task_wakeup:
+    mov eax, SYSCALL_TASK_WAKEUP
+    int 0x80
+    ret
+
+read_tsc:
+    rdtsc
     ret

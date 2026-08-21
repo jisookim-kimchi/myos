@@ -3,11 +3,12 @@ all:
 	nasm -f elf ../stdlib/start.asm -o ./build/start.o
 	nasm -f elf ../stdlib/stdlib.asm -o ./build/stdlib.asm.o
 	nasm -f elf ../stdlib/mutex.asm -o ./build/mutex.asm.o
-	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ./shell.c -o ./build/shell.o
+	i686-elf-gcc -I./src/ -I../stdlib/ -I../bench/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ./shell.c -o ./build/shell.o
 	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/stdlib.c -o ./build/stdlib.o
 	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/thread.c -o ./build/thread.o
 	i686-elf-gcc -I./src/ -I../stdlib/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../stdlib/malloc.c -o ./build/malloc.o
-	i686-elf-ld -g -T ./linker.ld -o ./shell.bin ./build/start.o ./build/shell.o ./build/stdlib.o ./build/thread.o ./build/malloc.o ./build/stdlib.asm.o ./build/mutex.asm.o
+	i686-elf-gcc -I./src/ -I../stdlib/ -I../bench/ -g -ffreestanding -falign-jumps -falign-functions -falign-loops -falign-labels -fstrength-reduce -fomit-frame-pointer -fno-asynchronous-unwind-tables -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -std=gnu99 -c ../bench/bench.c -o ./build/bench.o
+	i686-elf-ld -g -T ./linker.ld -o ./shell.bin ./build/start.o ./build/shell.o ./build/stdlib.o ./build/thread.o ./build/malloc.o ./build/stdlib.asm.o ./build/mutex.asm.o ./build/bench.o
 
 clean:
 	rm -rf ./build/*

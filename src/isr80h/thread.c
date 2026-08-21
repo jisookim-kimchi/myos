@@ -1,6 +1,8 @@
 #include "thread.h"
-#include "../../src/task/task.h"
-#include "../../src/task/process.h"
+#include "../task/task.h"
+#include "../system_control/system_control.h"
+#include <stdint.h>
+#include <stddef.h>
 
 void *sys_call_thread_create(struct interrupt_frame *frame)
 {
@@ -30,8 +32,8 @@ void *sys_call_thread_exit(struct interrupt_frame *frame)
     struct task* current_thread = get_cur_task();
     task_wakeup_by_event((void*)current_thread);
 
-    task_delete(current_thread);
     tasks_log();
+    task_delete(current_thread);
     while (1)
     {
         struct task* next_task = get_next_task();
@@ -40,6 +42,11 @@ void *sys_call_thread_exit(struct interrupt_frame *frame)
             next_task->state = TASK_RUNNING;
             task_switch(next_task);
             task_return(&next_task->regs);
+        }
+        else
+        {
+            enable_interrupts();
+            halt();
         }
     }
 
@@ -65,3 +72,26 @@ void *sys_thread_join(struct interrupt_frame *frame)
     return (void *)0;
 }
 
+void *sys_call_task_block(struct interrupt_frame *frame)
+{
+    struct task *current_task = get_cur_task();
+    if (!current_task)
+    {
+        return (void*)0;
+    }
+    void *channel = task_get_stack_item(current_task, 1);
+    task_block(channel);
+    return (void*)0;
+}
+
+void *sys_call_task_wakeup(struct interrupt_frame *frame)
+{
+    struct task *current_task = get_cur_task();
+    if (!current_task)
+    {
+        return (void*)0;
+    }
+    void *channel = task_get_stack_item(current_task, 1);
+    task_wakeup_by_event(channel);
+    return (void*)0;
+}

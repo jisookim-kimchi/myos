@@ -19,6 +19,10 @@ int thread_create(void *entry_point, int priority);
 int thread_exit(void);
 int thread_join(int thread_id);
 
+void task_block(void *channel);
+void task_wakeup(void *channel);
+uint64_t read_tsc(void);
+
 void mutex_lock(volatile int *lock_ptr);
 void mutex_unlock(volatile int *lock_ptr);
 

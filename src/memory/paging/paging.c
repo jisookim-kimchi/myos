@@ -87,6 +87,10 @@ uint32_t *get_paging_4gb_dir(paging_4gb_chunk_t* chunk)
 //페이지 디렉토리를 바꾸는 함수, 페이징 시스템에서 "어떤 가상 주소 공간을 사용할지" 선택하는 역할입니다.
 void paging_switch(paging_4gb_chunk_t* dir)
 {
+    if (!dir)
+        return ;
+    if (cur_dir == dir->directory_entry)
+        return;
     paging_load_dir(dir->directory_entry);
     cur_dir = dir->directory_entry;
 }

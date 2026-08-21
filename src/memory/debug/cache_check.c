@@ -24,14 +24,14 @@ void test_cache_speed(void)
         test_buffer[i & 1023] = i;
     }
 
-    uint64_t start_time = read_tsc();
+    //uint64_t start_time = read_tsc();
     for (volatile int i = 0; i < 100000; i++)
     {
         test_buffer[i & 1023] = i;
         (void)test_buffer[i & 1023];
     }
-    uint64_t end_time = read_tsc();
-    uint32_t cache_off_cycles = (uint32_t)(end_time - start_time);
+    //uint64_t end_time = read_tsc();
+    //uint32_t cache_off_cycles = (uint32_t)(end_time - start_time);
 
     paging_map(kernel_chunk, test_virt, test_phys, PAGING_PRESENT | PAGING_WRITEABLE);
     paging_switch(kernel_chunk);
@@ -40,34 +40,33 @@ void test_cache_speed(void)
     {
         test_buffer[i & 1023] = i;
     }
-    start_time = read_tsc();
+    //start_time = read_tsc();
     for (volatile int i = 0; i < 100000; i++)
     {
         test_buffer[i & 1023] = i;
         (void)test_buffer[i & 1023];
     }
-    end_time = read_tsc();
-    uint32_t cache_on_cycles = (uint32_t)(end_time - start_time);
+    //end_time = read_tsc();
+    //uint32_t cache_on_cycles = (uint32_t)(end_time - start_time);
 
     // Restore
     paging_map(kernel_chunk, test_virt, test_phys, PAGING_PRESENT | PAGING_WRITEABLE);
     paging_switch(kernel_chunk);
 
     // Output
-    print("\n === Cache Benchmark ===\n");
-    print("Cache OFF:   ");
-    print_int(cache_off_cycles);
-    print("\nCache ON: ");
-    print_int(cache_on_cycles);
-    print("\n====================== \n");
+    // print("\n === Cache Benchmark ===\n");
+    // print("Cache OFF:   ");
+    // print_int(cache_off_cycles);
+    // print("\nCache ON: ");
+    // print_int(cache_on_cycles);
+    // print("\n====================== \n");
 
-    // Page Table Walk Dump
     uint32_t dir_idx = 0, table_idx = 0;
     get_paging_indexes(test_virt, &dir_idx, &table_idx);
     uint32_t pte = paging_get(kernel_chunk->directory_entry, test_virt);
     uint32_t phys_addr = (pte & 0xFFFFF000) | ((uint32_t)test_virt & 0xFFF);
 
-    print("\n === Page Table Walk Dump ===\n");
+    print("\n === Page Table  ===\n");
     print("Virtual Address: ");
     print_hex((uint32_t)test_virt);
     print(" -> Page Directory Index: ");

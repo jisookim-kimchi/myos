@@ -37,8 +37,9 @@ int process_exit(int exit_code)
   }
 
   struct task *next_task = get_next_task();
-  if (next_task)
+  if (next_task && next_task->state == TASK_READY)
   {
+    next_task->state = TASK_RUNNING;
     task_switch(next_task);
     task_return(&next_task->regs);
   }
