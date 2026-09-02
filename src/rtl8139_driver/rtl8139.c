@@ -35,7 +35,7 @@ void rtl8139_init(uint32_t port_addr)
     outsb(port_addr + RTL8139_CMD, 0x10); //폰 초기화.
     while ((insb(port_addr + RTL8139_CMD) & 0x10) != 0)//RTL 8139 폰 켜질때까지 기다려.
     {
-
+        
     }
     rtl8139_read_mac(port_addr, my_mac);
     outl(port_addr + RTL8139_RBSTART, (uint32_t)rx_buffer); //전화 받으면 여기에 저장해, 전화 기록 설정.

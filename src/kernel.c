@@ -34,13 +34,13 @@ struct tss tss;
 struct gdt gdt_real[MYOS_TOTAL_GDT_SEGMENTS];
 struct kernel_gdt gdt_structured[MYOS_TOTAL_GDT_SEGMENTS] =
 {
-    {.base = 0x00, .limit = 0x00, .type = 0x00},       // NULL Segment
-    {.base = 0x00, .limit = 0xffffffff, .type = 0x9a}, // Kernel code segment
-    {.base = 0x00, .limit = 0xffffffff, .type = 0x92}, // Kernel data segment
-    {.base = 0x00, .limit = 0xffffffff, .type = 0xfa}, // User code segment (Read/Execute)
-    {.base = 0x00, .limit = 0xffffffff, .type = 0xf2}, // User data segment
-    {.base = 0x00, .limit = sizeof(tss), .type = 0xE9} // TSS Segment
-};
+    {.base = 0x00, .limit = 0x00, .type = 0x00},       // NULL Segment 0x00
+    {.base = 0x00, .limit = 0xffffffff, .type = 0x9a}, // Kernel code segment 0x08
+    {.base = 0x00, .limit = 0xffffffff, .type = 0x92}, // Kernel data segment 0x10
+    {.base = 0x00, .limit = 0xffffffff, .type = 0xfa}, // User code segment (Read/Execute) 0x18
+    {.base = 0x00, .limit = 0xffffffff, .type = 0xf2}, // User data segment 0x20
+    {.base = 0x00, .limit = sizeof(tss), .type = 0xE9} // TSS Segment 0x28
+}; //total 48 bytes
 
 void kernel_main()
 {

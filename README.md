@@ -1,34 +1,36 @@
 # MyOS: 32-bit x86 Operating System
 
 ### Bootloader
-BIOS ROM runs immediately upon turning on the PC -> loads the bootloader by searching for the boot signature "0x55AA".
-Copies this sector (511 and 512 bytes) to RAM address 0x0000:0x7C00.
+BIOS ROM runs immediately upon turning on the CPU -> loads the bootloader by searching for the boot signature "0x55AA".
+Copies this sector (511 and 512 bytes) to RAM address 0x0000:0x7C00(Segment:Offset).
+in Realmode there's only one segment at 0x0000!(CS,DS,SS,ES)
 Jumps to 0x7C00 to execute the bootloader!
-![bootSignature](image/boot_signatureCheck.jpg)  
+1. ![bootSignature](image/boot_signatureCheck.jpg)  
 *Checking boot signature*
 
 > [!My Thoughts]  
 > Transitioning from the bootloader to the kernel was very difficult because I had to write it in assembly.  
 > In the process of switching to protected mode: loading the GDT, setting the CR0 PE(Protection Enable) bit, and performing a Far Jump.
 
-![LGDT Loading Debugging](image/lgdt.jpg)  
+2. ![LGDT Loading Debugging](image/lgdt.jpg)  
 *GDT descriptor loading via `lgdt` instruction*
-- GDT (Global Descriptor Table): a static table that defines the base address, limit, and privilege levels (Ring 0 / Ring 3) for each memory segment.
+- GDT (Global Descriptor Table): a static table that defines the base address.
+The bootloader only loads a **minimal temporary GDT (Ring 0 Kernel Code/Data)** to enter 32-bit Protected Mode.
 
-![Real Mode to Protected Mode](image/realMode_to_protectMode.jpg)  
+
+4. ![Real Mode to Protected Mode](image/realMode_to_protectMode.jpg)  
+Loading the temporary GDT, setting the `CR0 PE bit`, and performing a Far Jump to 32-bit mode (`load32`).
 *CR0 PE bit 0 -> 1 and Far Jump to CS register it change to kernel code seg (offset 0x08)*  
 - The GDT is a structure defining segment registers, which can be thought of as a map showing where segments start and end.  
 - `CR0 PE` changed 0 -> 1 switches the mode to 32-bit Protected Mode.  
 However, we only changed the mode; CPU is not in the kernel yet.  
 
-1. Entering Protected Mode:  
-Loading the temporary GDT, setting the `CR0 PE bit`, and performing a Far Jump to 32-bit mode (`load32`).
+5. `ATA LBA Loading`: Bypassed BIOS interrupts and directly used the hard disk controller's I/O ports to read data, delivering 150 kernel sectors to the 1MB on RAM.
+- LBA : Logical Block Addressing.
+- ATA : Advanced Technology Attachment.
 
-2. `ATA LBA Loading`: Bypassed BIOS interrupts and directly used the hard disk controller's I/O ports to read data, delivering 150 kernel sectors to the 1MB on RAM.
 > It means Kernel sectors start from 1MB.  
 > It is like a flat array for sectors, each sector has 512 bytes. it allows like index access to disck sectors.  
-
-3. A20 GATE(BUS): Enabled to allow memory access beyond 1MB addr.
 
 ```
 [Memory Map]
@@ -45,9 +47,11 @@ Loading the temporary GDT, setting the `CR0 PE bit`, and performing a Far Jump t
 ```
 
 ### kernel.asm
-1. Initializes all segment registers to the kernel segment (0x10).
+
+1. Initializes all segment's registers to the kernel segment (0x10).
 2. Sets up the kernel stack (0x200000) so kernel stack is 0x100000 ~ 0x200000.
-3. Remaps(IRQ 0-15 -> 32-47) the `PIC`(Programmable Interrupt Controller)which like `NVIC` in `ARM Cortex-M`.
+3. A20 GATE(BUS): Enabled to allow memory access beyond 1MB addr.
+4. Remaps(IRQ 0-15 -> 32-47) the `PIC`(Programmable Interrupt Controller)which like `NVIC` in `ARM Cortex-M`.
 
 ![Kernel Start](image/kernel_start.jpg)  
 > Segment registers set to 0x10 and ESP/EBP set to 0x200000 at kernel entry 0x100000.
@@ -174,15 +178,14 @@ Why: When reading a file, you occasionally need to search the FAT table address 
 > **Hardware Cache Benchmark (Cache ON vs Cache OFF)**
 > Proves a **300%+ CPU cycle performance difference** (Cache OFF: ~4.6M cycles vs Cache ON: ~1.5M cycles) by controlling the `PCD (Page Cache Disable)` bit in Page Table Entries using `RDTSC` cycle-level measurement.
 
-### RDTSC ###
-
->> CPU cycle : A single pulse of the CPU clock.
->> CPU Clock Speed : Frequency of the CPU cycles per second.
->> TSC : Time Stamp Counter inside the CPU chip that increments every cycle, read by the `RDTSC` instruction.  
->> memory/debug/cache_check.c : check cpu cache
+### RDTSC ###  
+> CPU cycle : A single pulse of the CPU clock.
+> CPU Clock Speed : Frequency of the CPU cycles per second.
+> TSC : Time Stamp Counter inside the CPU chip that increments every cycle, read by the `RDTSC` instruction.  
+> memory/debug/cache_check.c : check cpu cache
 
 **IMPORTANT : TSC and CPU cycle are not the same thing. (TSC is the hardware counter that counts CPU cycles.) Since CPU frequency changed dynamically in modern CPU, so it is not recommended to use TSC for measuring time**
->>> `todo` : I just wanted to measure how fast a context switch takes.
+> `todo` : I just wanted to measure how fast a context switch takes.
 BUT! `Switching time is not always same!, not constant`... So I plan to run a loop test to measure the latency variance and time differences
 
 #### How to do mapping v-memory to physical memory? 
@@ -229,7 +232,7 @@ int *a = NULL;fault_CR2
 ![Fault CR2](image/fault_cr2_v2.jpg)
 
 #### Interrupt
-When ring3(user mode) calls `int 0x80`(I would say it is like Software BUS, it connects usre mode to kernel mode) ->
+When ring3(user mode) calls `int 0x80`(I would say it is like Software Interrupt, it connects usre mode to kernel mode) ->
 ![shell call kernel](image/esp_change_shell_to_kernel.jpg)
 The CPU looks at the TSS, shifts the stack pointer to `ESP0` (kernel stack), and backs up the original states (user stack, address, code location) onto the kernel stack.
 Then it restores states (see Restore state in `idt.asm`) via `popad` and returns via `iret`.
@@ -271,19 +274,34 @@ How is data passed?
 Note: The kernel temporarily switches paging (`paging_switch`) to the user's page directory, reads that memory, and returns to the kernel.
 4. Hardware Interrupt:
 Reads data from ports using the I/O bus.
-Pressing a key triggers IRQ 1 -> jumps to IDT 0x21 -> reads data from port 0x60 (keyboard data port).
+Pressing a key triggers IRQ 1-> jumps to IDT 0x21 -> reads data from port 0x60 (keyboard data port).
 `io.asm` acts as the driver.
+
+#### PROCESS
+A container (house) that includes memory, files, etc.
+Process Lifecycle & Memory Setup
+1. Allocate a process container (`struct process`).
+2. `main_task_create` allocates a new 4GB Page Directory for the process.
+3. `process_load_data` loads the executable binary from disk into physical RAM.
+  - 1. kernel_malloc() for binary file.
+4. `process_map_virtual_memory` maps the code (Text segment at `0x10000000`) and main user stack into the `page_directory`.
+  - binaray file      ------>  User Text  
+  - kernel heap       ------>  User Stack  
+  
+5. `init_task` initializes registers (`regs.ip = 0x10000000`) and links `task->process = process`.(main thread).
 
 #### TASK/Thread...
 A task is a thread.
 How does a task use process shared resources?
 1. Create a process first.
-2. When calling `init_task`, creates a 4GB memory directory. Here, `task->process = process`.
+2. When calling `init_task` -> `task->process = process`.
 3. Load file data -> load into physical memory.
 4. Important point:
-`process_map_memory` maps virtual memory to physical memory.
-Each task has a page directory. `process_map_binary` maps the process physical address to the page directory. 
-This means multiple tasks can share the process physical memory space.
+  
+- **Shared Resources**: Sub-threads share `task->page_directory = proc->main_task->page_directory`, automatically sharing Code, Data, BSS, Heap, and File Descriptors.  
+  
+- **Independent Resources**: Each thread gets its own isolated User Stack (`user_stack`) and CPU register context.
+> (`regs.ip`, `regs.esp`).  
   
 > think how distribute memory to thread..
 > malloc...? dangerous and Latency,,
@@ -307,56 +325,71 @@ This means multiple tasks can share the process physical memory space.
 
 ![data_race](image/data_race.jpg) --> need to make mutex!
 
-> 'lock' check : 
+> `lock` check :
+
+```
+ mutex_lock:
+    mov edx, [esp + 4]   ; count_lock address
+.retry:
+    mov eax, 1
+    xchg [edx], eax      ; atomic 1 put and old eax get, xchg : exchage.
+    test eax, eax        ; check old value was 0?
+    jnz .retry           ; if not zero -> wait
+    ret
+```
 
 ![lock](image/thread1_count_stack.jpg).  
 
 ![Deadlock_bug](image/Deadlock_bug.jpg).
 since from compiler perspective, all was correct so it's hard to find...
-so i made task_log() function and then i could check which thread was blocked...
-the issue was i did hardcoding just in sys_thread_exit_call() after that just let wake up main thread, so it was wrong! so i changed it to wake_up_by_event()
+so i made `task_log()` function and then i could check which thread was blocked...
+the issue was i did hardcoding just in `sys_thread_exit_call()` -> after that just let wake up `main thread`, so it was wrong! so i changed it to `wake_up_by_event()`
 
-#### Scheduling (Context Switching)  
+#### Scheduling (Context Switching)
+
+1. In the kernel, I configure a periodic hardware timer interrupt (PIT at 100Hz / 10ms). As user tasks execute, this timer interrupt periodically preempts the currently running task, saves its CPU context, and invokes the schedule() function to dispatch the next ready task in a round-robin priority fashion.
+
 1. Scheduling: Preemptive Priority-Based Scheduling.
-Selects the next task to run by following the list's next pointer in a Round-Robin style(Circut).  
-Uses timer interrupts to perform preemptive scheduling every 10ms.  
+Selects the next task to run by following the list's next pointer in a Round-Robin style(Circular Queue).  
+
+Uses timer interrupts to perform preemptive scheduling every 10ms.
 The OS forces a switch even if the task doesn't yield.  
+
 Why preemptive?  
 Because even if a program gets stuck in a bug, the OS forces a switch every 10ms so it doesn't freeze.  
 Implementing a priority queue to schedule based on priorities could be a good improvement.  
-How is priority distinguished? -> If a task runs for 100ms continuously, its priority is lowered to keep the system responsive.
+If a task runs for 100ms(longtime) continuously, its priority is lowered to keep the system responsive.  
 
-Alternative approaches:
+Alternative approaches:  
 Assigning fixed priorities to each task (important in embedded systems), or reservation schemes.  
-2. Context Switching:  
-`task_switch` and `task_return`.  
-3. Paging Switch (CR3 Switch):  
-`paging_switch(task->page_directory)`.  
-Puts the page directory address of the new task into the CR3 register.  
-At this moment, the virtual memory space observed by the CPU instantly changes from Task A's world to Task B's world (code region and 16KB stack are swapped).  
+2. Context Switching:    
+`task_switch` and `task_return`.
+
+3. **Paging Switch (CR3 not changed!).**  
+Since threads share the same page directory, the virtual memory space (code, data, heap) does not change.  
+Only the thread's execution context is switched:  
+- `ESP` (swapped to the thread's isolated user stack)  
+- `EIP` (swapped to the thread's next instruction address)  
+- `CPU Registers` (restored via `task_return`)  
+  
 4. Privilege Recovery (TSS Update):  
 `tss.esp0 = main_task_create->kstack + 4096`.  
 TSS (Task State Segment): Informs the CPU of the kernel stack (Ring 0) to use when an interrupt occurs in user mode (Ring 3).  
-Since each task has its own kernel stack, the TSS must be updated on every switch!  
+Since each task has its own kernel stack, the TSS.esp0 must be updated on every switch!  
 
-* NOTE: Currently in MyOS, the shell keeps running even when idle (wasting CPU cycles). 
-> need to add IDLE STATE FUNCTION.
-
-* NOTE: since my LOCK is busy-way.. so i need to change mutex style.. dann BLOCKED!
-
-* NOTE : need to make thread_join
 
 #### Thread bench 
 
+**BADCASE**
+![pingpong1](image/PingPong_TEST_BAD_CASE.jpg)
+- problem : whenever context changed , cr3 flush happend! but for thread-context change cr3 shouldn't be changed... so i need to delete `paging_switch()` from `task_switch()`;
 
-#### PROCESS
-A container (house) that includes memory, files, etc.
-An active worker that occupies the CPU and executes code (the target of Context Switching).
-A process has one or more tasks (currently 1:1, but can be expanded for multitasking).
-Creation flow: `process_load_for_slot -> process_load_data -> process_map_virtual_memory -> process_setup_arguments -> iret`.
+**GOODCASE**
+![pingpong2](image/PingPong_TEST_GOOD_CASE.jpg)
+
 
 #### ELF
-ELF is like a map showing where code and data belong.
+ELF is like a map showing where `code` and `data` belong.
 Flow: `process_load_data -> elfloader_load_elf`.
 
 #### Sbrk (Memory Allocation)
@@ -406,21 +439,22 @@ Communication Start:
 Sending data to 0xC000 goes to the NIC.
 Our NIC is RTL8139.
 
-#### rtl8139
+#### rtl8139(Lan card)
 RTL8139 network driver.
-Detects devices via the PCI bus and handles packet transmission/reception. See `rtl8139.h`.
-Packet Transmission (TX): Uses 4 slots in a round-robin format.
-Packet Reception (RX): Uses WRAP mode.
-WRAP Mode: Saves packets continuously without truncation. That's why I added `+1500` bytes. It is simple to implement but requires more memory.
-To test packets, Wireshark is required.
-Command: `qemu-system-i386 -hda ./myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap`
-
-#### Ethernet Frame
-Ethernet is a protocol for transmitting data over LAN cables (Local Area Network).
-Local, not wide area. Different from Wi-Fi!
-Format:
+Detects devices via the PCI bus `0xCF8 and 0xCFC ports` and handles packet transmission/reception.  
+(See `rtl8139.h`.)  
+Packet Transmission (TX): Uses 4 slots in a round-robin format.  
+Packet Reception (RX): Uses WRAP mode.  
+WRAP Mode: Saves packets continuously without truncation. That's why I added `+1500` bytes. It is simple to implement but requires more memory.  
+To test packets, Wireshark is required.  
+Command: `qemu-system-i386 -hda ./myos.bin -netdev user,id=net0 -device rtl8139,netdev=net0 -object filter-dump,id=f1,netdev=net0,file=dump.pcap`  
+  
+#### Ethernet Frame  
+Ethernet is a protocol for transmitting data over LAN cables (Local Area Network).  
+Local, not wide area. Different from Wi-Fi!  
+Format:  
 [Dest MAC Addr (6 bytes)] [Src MAC Addr (6 bytes)] [Frame Type (2 bytes)] [Payload (Max 1500 bytes)]
-
+  
 ##### ARP (Address Resolution Protocol)
 Structure under Ethernet Frame:
 Ethernet Header (14 bytes) -> ARP Packet (28 bytes)
